@@ -1,0 +1,2674 @@
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 1   
+
+
+C51 COMPILER V9.53.0.0, COMPILATION OF MODULE MEDICALSERVICE
+OBJECT MODULE PLACED IN MedicalService.OBJ
+COMPILER INVOKED BY: D:\keil5\C51\BIN\C51.EXE MedicalService.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include<reg52.h>
+   2          #include <math.h>
+   3           #include <intrins.h>
+   4           #include "CDS5516.h"
+   5           #include"ADC.H"
+   6           /***电机控制引脚*****/
+   7            sbit ML1=P0^2;
+   8            sbit ML2=P0^3;
+   9            sbit MR1=P0^4;
+  10            sbit MR2=P0^5;
+  11           /*****使能端******/
+  12            sbit ENA=P0^0;
+  13            sbit ENB=P0^1;
+  14           /*******传感器前****/
+  15           sbit D0=P0^6;
+  16           sbit D1=P0^7;
+  17           sbit D2=P1^1;
+  18           sbit D3=P1^2;
+  19           sbit D4=P1^3;
+  20           sbit D5=P1^4;
+  21           sbit DL=P3^5;
+  22           sbit DR=P1^0;
+  23           /*******传感器后***/
+  24           sbit B0=P1^5;
+  25           sbit B1=P1^6;
+  26           sbit B2=P1^7;
+  27           sbit B3=P2^4;
+  28           sbit B4=P2^5;
+  29           sbit B5=P2^6;
+  30           sbit BL=P2^7;
+  31           sbit BR=P3^2;
+  32          /******按键**********/
+  33           sbit k1 = P2^1;
+  34           sbit k2 = P2^2;
+  35          /******激光***********/
+  36          sbit laserL = P3^3;
+  37          sbit laserR = P3^4;
+  38          //sbit control = P3^6;
+  39          sbit Middle=P3^6;
+  40          sbit lasersteering = P3^7;
+  41           /******超声波*******/
+  42           sbit sonic=P2^0;
+  43           /******语音播放*****/
+  44           sbit Voice=P2^3;
+  45           /****变量********/
+  46           unsigned int hightL,hightR,count;
+  47           unsigned int num;//控制周期的长短
+  48           unsigned int tempposition;
+  49           //unsigned char lasermiddle;
+  50           
+  51          void delay_ms(unsigned int t)
+  52          {
+  53   1        unsigned int a,b,c;
+  54   1      
+  55   1        for(a=t;a>0;a--)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 2   
+
+  56   1      
+  57   1        for(b=10;b>0;b--)
+  58   1      
+  59   1        for(c=85;c>0;c--);
+  60   1      }
+  61          
+  62          void stop()
+  63          {
+  64   1         ML1=0;
+  65   1         ML2=0;
+  66   1         MR1=0;
+  67   1         MR2=0;
+  68   1      }
+  69          
+  70          void init()
+  71          {
+  72   1         ENA=1;
+  73   1         ENB=1;
+  74   1         num=200;
+  75   1         TMOD=0x02;
+  76   1         EA=1;
+  77   1         ET0=1;
+  78   1         TH0=145;  
+  79   1         TL0=145;   
+  80   1         TR0=1;
+  81   1      }
+  82          
+  83          /*void initlaserm()
+  84          {
+  85            EA=1;
+  86            TMOD=0x10;
+  87            ET1=1;
+  88            TH1=(65536-10000)/256;  
+  89            TL1=(65536-10000)%256;   
+  90            TR1=1;
+  91          }*/
+  92          void left(bit f)
+  93          {
+  94   1        if(f)
+  95   1        {
+  96   2          ML1=1;
+  97   2          ML2=0;
+  98   2        }
+  99   1        else
+ 100   1        {
+ 101   2          ML1=0;
+ 102   2          ML2=1;
+ 103   2        }
+ 104   1      }
+ 105          
+ 106          
+ 107          void right(bit f)
+ 108          {
+ 109   1        if(f)
+ 110   1        {
+ 111   2          MR1=1;
+ 112   2          MR2=0;
+ 113   2        }
+ 114   1        else
+ 115   1        {
+ 116   2          MR1=0;
+ 117   2          MR2=1;
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 3   
+
+ 118   2        }
+ 119   1      }
+ 120          
+ 121          void clDL(unsigned char status)
+ 122          { 
+ 123   1        hightL=1;
+ 124   1        hightR=700 ;
+ 125   1        right(status);
+ 126   1        left(status);
+ 127   1      }
+ 128          
+ 129          void nurseDL(unsigned char status)
+ 130          { 
+ 131   1        hightL=1;
+ 132   1        hightR=90 ;
+ 133   1        right(status);
+ 134   1        left(status);
+ 135   1      }
+ 136          void crBL()
+ 137          {
+ 138   1        hightL=1;
+ 139   1        hightR=600;
+ 140   1        right(0);
+ 141   1        left(0);
+ 142   1      }
+ 143          
+ 144          void clDR(unsigned char status)
+ 145          { 
+ 146   1        hightL=700;
+ 147   1        hightR=1;
+ 148   1        right(status);
+ 149   1        left(status);
+ 150   1      }
+ 151          
+ 152          void nurseDR(unsigned char status)
+ 153          { 
+ 154   1        hightL=91;
+ 155   1        hightR=1;
+ 156   1        right(status);
+ 157   1        left(status);
+ 158   1      }
+ 159          
+ 160          void crBR()
+ 161          {
+ 162   1        hightL=600;
+ 163   1        hightR=1;
+ 164   1        right(0);
+ 165   1        left(0);
+ 166   1      }
+ 167          
+ 168          void clD0(unsigned char status)
+ 169          { 
+ 170   1        hightL=300;
+ 171   1        hightR=1;
+ 172   1        right(status);
+ 173   1        left(status);
+ 174   1      }
+ 175          
+ 176          void nurseD0(unsigned char status)
+ 177          { 
+ 178   1        hightL=80;
+ 179   1        hightR=1;
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 4   
+
+ 180   1        right(status);
+ 181   1        left(status);
+ 182   1      }
+ 183          
+ 184          void clB0()
+ 185          {
+ 186   1        hightL=1;
+ 187   1        hightR=250;
+ 188   1        right(0);
+ 189   1        left(0);
+ 190   1      }
+ 191          void clD1(unsigned char status)
+ 192          { 
+ 193   1        hightL=200;
+ 194   1        hightR=1;
+ 195   1        right(status);
+ 196   1        left(status);
+ 197   1      }
+ 198          
+ 199          void nurseD1(unsigned char status)
+ 200          { 
+ 201   1        hightL=70;
+ 202   1        hightR=1;
+ 203   1        right(status);
+ 204   1        left(status);
+ 205   1      }
+ 206          
+ 207          void clB1()
+ 208          {
+ 209   1        hightL=1;
+ 210   1        hightR=150;
+ 211   1        right(0);
+ 212   1        left(0);
+ 213   1      }
+ 214          void crD4(unsigned char status)
+ 215          {
+ 216   1         hightL=1;
+ 217   1         hightR=225;
+ 218   1         right(status);
+ 219   1         left(status);
+ 220   1      }
+ 221          
+ 222          void nurseD4(unsigned char status)
+ 223          {
+ 224   1         hightL=1;
+ 225   1         hightR=75;
+ 226   1         right(status);
+ 227   1         left(status);
+ 228   1      }
+ 229          
+ 230          void clB4()
+ 231          {
+ 232   1        hightL=150;
+ 233   1        hightR=1;
+ 234   1        right(0);
+ 235   1        left(0);
+ 236   1      }
+ 237          
+ 238          void crD5(unsigned char status)
+ 239          {
+ 240   1         hightL=1;
+ 241   1         hightR=325;
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 5   
+
+ 242   1         right(status);
+ 243   1         left(status);
+ 244   1      }
+ 245          
+ 246          void nurseD5(unsigned char status)
+ 247          {
+ 248   1         hightL=1;
+ 249   1         hightR=80;
+ 250   1         right(status);
+ 251   1         left(status);
+ 252   1      }
+ 253          
+ 254          void clB5()
+ 255          {
+ 256   1        hightL=250;
+ 257   1        hightR=1;
+ 258   1        right(0);
+ 259   1        left(0);
+ 260   1      }
+ 261          
+ 262          void gocllaserL()
+ 263          { 
+ 264   1        hightL=200;
+ 265   1        hightR=1;
+ 266   1        right(1);
+ 267   1        left(1);
+ 268   1      }
+ 269          void gocrlaserR()
+ 270          { 
+ 271   1        hightL=1;
+ 272   1        hightR=200;
+ 273   1        right(1);
+ 274   1        left(1);
+ 275   1      }
+ 276          void backcllaserL()
+ 277          { 
+ 278   1        hightL=1;
+ 279   1        hightR=140;
+ 280   1        right(0);
+ 281   1        left(0);
+ 282   1      }
+ 283          void backcrlaserR()
+ 284          { 
+ 285   1        hightL=180;
+ 286   1        hightR=1;
+ 287   1        right(0);
+ 288   1        left(0);
+ 289   1      }
+ 290          
+ 291           void turnR() 
+ 292           {
+ 293   1         hightL=400;
+ 294   1         hightR=200;
+ 295   1         right(0);
+ 296   1         left(1);
+ 297   1       }
+ 298          
+ 299           void turnR180() 
+ 300           {
+ 301   1         hightL=400;
+ 302   1         hightR=200;
+ 303   1         right(0);
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 6   
+
+ 304   1         left(1);
+ 305   1       }
+ 306           
+ 307          void turnRModify()
+ 308          {
+ 309   1        hightL=30;
+ 310   1        hightR=60;
+ 311   1        right(0);
+ 312   1        left(1);
+ 313   1      }
+ 314          
+ 315           void turnL()
+ 316           {
+ 317   1        hightR=400;
+ 318   1        hightL=200;
+ 319   1        right(1);
+ 320   1        left(0);
+ 321   1       }
+ 322          
+ 323          void turnLModify()
+ 324          {
+ 325   1        hightR=30;
+ 326   1        hightL=60;
+ 327   1        right(1);
+ 328   1        left(0);
+ 329   1      }
+ 330          
+ 331           void go()
+ 332           {
+ 333   1         /*hightR=205;
+ 334   1         hightL=165;*/
+ 335   1         hightR=400;
+ 336   1         hightL=360;
+ 337   1         left(1);
+ 338   1         right(1);
+ 339   1       }
+ 340           
+ 341          void gonurseplatform()
+ 342          {
+ 343   1         hightR=100;
+ 344   1         hightL=85 ;
+ 345   1         left(1);
+ 346   1         right(1);
+ 347   1      }
+ 348           void back()
+ 349           {
+ 350   1         hightR=205;
+ 351   1         hightL=180;
+ 352   1         left(0);
+ 353   1         right(0);
+ 354   1       }
+ 355          
+ 356          void backA()
+ 357          {
+ 358   1         hightR=70;
+ 359   1         hightL=400;
+ 360   1         left(0);
+ 361   1         right(0);
+ 362   1      }
+ 363          
+ 364          
+ 365          void goA()
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 7   
+
+ 366          {
+ 367   1         hightR=450;
+ 368   1         hightL=360;
+ 369   1         left(1);
+ 370   1         right(1);
+ 371   1      }
+ 372          
+ 373          void backB()
+ 374          {
+ 375   1         hightR=220;
+ 376   1         hightL=180;
+ 377   1         left(0);
+ 378   1         right(0);
+ 379   1      }
+ 380          
+ 381          void gone()
+ 382          {
+ 383   1        go();   
+ 384   1        if((!DL)||(!DR))
+ 385   1        {
+ 386   2          while(!DL)
+ 387   2          {
+ 388   3            clDL(1);
+ 389   3            if(!D2||!D3)
+ 390   3            {
+ 391   4              break;
+ 392   4            }
+ 393   3          }
+ 394   2          while(!DR)
+ 395   2          {
+ 396   3            clDR(1);
+ 397   3            if(!D2||!D3)
+ 398   3            {
+ 399   4              break;
+ 400   4            }
+ 401   3          }
+ 402   2        }
+ 403   1        if((!D0)||(!D1))
+ 404   1        {
+ 405   2            while(!D0)
+ 406   2            {
+ 407   3              clD0(1);
+ 408   3              if(!D2||!D3)
+ 409   3              {
+ 410   4                break;
+ 411   4              }
+ 412   3            }
+ 413   2            while(!D1)
+ 414   2            {
+ 415   3              clD1(1);
+ 416   3              if(!D2||!D3)
+ 417   3              {
+ 418   4                break;
+ 419   4              }
+ 420   3            }
+ 421   2          }        
+ 422   1          if((!D4||!D5))
+ 423   1          {
+ 424   2            while(!D5)
+ 425   2            {
+ 426   3              crD5(1);
+ 427   3              if(!D2||!D3)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 8   
+
+ 428   3              {
+ 429   4                break;
+ 430   4              }
+ 431   3            }
+ 432   2            while(!D4)
+ 433   2            {
+ 434   3              crD4(1);
+ 435   3              if(!D2||!D3)
+ 436   3              {
+ 437   4                break;
+ 438   4              }
+ 439   3            }
+ 440   2           }
+ 441   1      }
+ 442          
+ 443          void backbegin()
+ 444          {
+ 445   1        back();   
+ 446   1        if((!DL)||(!DR))
+ 447   1        {
+ 448   2          while(!DL)
+ 449   2          {
+ 450   3            clDL(0);
+ 451   3            if(!D2||!D3)
+ 452   3            {
+ 453   4              break;
+ 454   4            }
+ 455   3          }
+ 456   2          while(!DR)
+ 457   2          {
+ 458   3            clDR(0);
+ 459   3            if(!D2||!D3)
+ 460   3            {
+ 461   4              break;
+ 462   4            }
+ 463   3          }
+ 464   2        }
+ 465   1        if((!D0)||(!D1))
+ 466   1        {
+ 467   2            while(!D0)
+ 468   2            {
+ 469   3              clD0(0);
+ 470   3              if(!D2||!D3)
+ 471   3              {
+ 472   4                break;
+ 473   4              }
+ 474   3            }
+ 475   2            while(!D1)
+ 476   2            {
+ 477   3              clD1(0);
+ 478   3              if(!D2||!D3)
+ 479   3              {
+ 480   4                break;
+ 481   4              }
+ 482   3            }
+ 483   2          }        
+ 484   1          if((!D4||!D5))
+ 485   1          {
+ 486   2            while(!D5)
+ 487   2            {
+ 488   3              crD5(0);
+ 489   3              if(!D2||!D3)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 9   
+
+ 490   3              {
+ 491   4                break;
+ 492   4              }
+ 493   3            }
+ 494   2            while(!D4)
+ 495   2            {
+ 496   3              crD4(0);
+ 497   3              if(!D2||!D3)
+ 498   3              {
+ 499   4                break;
+ 500   4              }
+ 501   3            }
+ 502   2           }
+ 503   1      }
+ 504          
+ 505          void gonenurseplatform()
+ 506          {
+ 507   1        gonurseplatform();  
+ 508   1        if((!DL)||(!DR))
+ 509   1        {
+ 510   2          while(!DL)
+ 511   2          {
+ 512   3            if(!BR)
+ 513   3            {
+ 514   4              break;
+ 515   4            }
+ 516   3            if(!sonic)
+ 517   3            {
+ 518   4              break;
+ 519   4            }
+ 520   3            if(!D2||!D3)
+ 521   3            {
+ 522   4              break;
+ 523   4            }
+ 524   3            nurseDL(1);
+ 525   3          }
+ 526   2          while(!DR)
+ 527   2          {
+ 528   3            if(!BR)
+ 529   3            {
+ 530   4              break;
+ 531   4            }
+ 532   3            if(!sonic)
+ 533   3            {
+ 534   4              break;
+ 535   4            }
+ 536   3            if(!D2||!D3)
+ 537   3            {
+ 538   4              break;
+ 539   4            }
+ 540   3            nurseDR(1);
+ 541   3          }
+ 542   2        }
+ 543   1        if((!D0)||(!D1))
+ 544   1        {
+ 545   2            while(!D0)
+ 546   2            {
+ 547   3              if(!BR)
+ 548   3              {
+ 549   4                break;
+ 550   4              }
+ 551   3              if(!sonic)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 10  
+
+ 552   3              {
+ 553   4                break;
+ 554   4              }
+ 555   3              if(!D2||!D3)
+ 556   3              {
+ 557   4                break;
+ 558   4              }
+ 559   3              nurseD0(1);
+ 560   3            }
+ 561   2            while(!D1)
+ 562   2            {
+ 563   3              if(!BR)
+ 564   3              {
+ 565   4                break;
+ 566   4              }
+ 567   3              if(!sonic)
+ 568   3              {
+ 569   4                break;
+ 570   4              }
+ 571   3              if(!D2||!D3)
+ 572   3              {
+ 573   4                break;
+ 574   4              }
+ 575   3              nurseD1(1);
+ 576   3            }
+ 577   2          }        
+ 578   1          if((!D4||!D5))
+ 579   1          {
+ 580   2            while(!D5)
+ 581   2            {
+ 582   3              if(!BR)
+ 583   3              {
+ 584   4                break;
+ 585   4              }
+ 586   3              if(!sonic)
+ 587   3              {
+ 588   4                break;
+ 589   4              }
+ 590   3              if(!D2||!D3)
+ 591   3              {
+ 592   4                break;
+ 593   4              }
+ 594   3              nurseD5(1);
+ 595   3            }
+ 596   2            while(!D4)
+ 597   2            {
+ 598   3              if(!BR)
+ 599   3              {
+ 600   4                break;
+ 601   4              }
+ 602   3              if(!sonic)
+ 603   3              {
+ 604   4                break;
+ 605   4              }
+ 606   3              if(!D2||!D3)
+ 607   3              {
+ 608   4                break;
+ 609   4              }
+ 610   3              nurseD4(1);
+ 611   3            }
+ 612   2           }
+ 613   1      }
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 11  
+
+ 614          void goneback()
+ 615          {
+ 616   1        back();
+ 617   1        if((!BL)||(!BR))
+ 618   1        {
+ 619   2          while(!BL)
+ 620   2          {
+ 621   3            crBL();
+ 622   3            if(!B2||!B3)
+ 623   3            {
+ 624   4              break;
+ 625   4            }
+ 626   3          }
+ 627   2          while(!BR)
+ 628   2          {
+ 629   3            crBR();
+ 630   3            if(!B2||!B3)
+ 631   3            {
+ 632   4              break;
+ 633   4            }
+ 634   3          }
+ 635   2        }
+ 636   1        if((!B0)||(!B1))
+ 637   1        {
+ 638   2          while(!B0)
+ 639   2          {
+ 640   3            clB0();
+ 641   3            if(!B2||!B3)
+ 642   3            {
+ 643   4              break;
+ 644   4            }
+ 645   3          }
+ 646   2          while(!B1)
+ 647   2          {
+ 648   3            clB1();
+ 649   3            if(!B2||!B3)
+ 650   3            {
+ 651   4              break;
+ 652   4            }
+ 653   3          }
+ 654   2        }
+ 655   1        if((!B4)||(!B5))
+ 656   1        {
+ 657   2          while(!B5)
+ 658   2          {
+ 659   3            clB5();
+ 660   3            if(!B2||!B3)
+ 661   3            {
+ 662   4              break;
+ 663   4            }
+ 664   3          }
+ 665   2          while(!B4)
+ 666   2          {
+ 667   3            clB4();
+ 668   3            if(!B2||!B3)
+ 669   3            {
+ 670   4              break;
+ 671   4            }
+ 672   3          }
+ 673   2        }
+ 674   1      }
+ 675          void goLaserModify()
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 12  
+
+ 676          {
+ 677   1        go();
+ 678   1        if(laserL||laserR)
+ 679   1        {
+ 680   2          while(laserL)
+ 681   2          {
+ 682   3            gocllaserL();
+ 683   3            if(!laserL)
+ 684   3            {
+ 685   4              break;
+ 686   4            }
+ 687   3            if((!D1)&&(!D2)&&(!D3)&&(!D4))
+ 688   3            {
+ 689   4              break;
+ 690   4            }
+ 691   3          }
+ 692   2          while(laserR)
+ 693   2          {
+ 694   3            gocrlaserR();
+ 695   3            if(!laserR)
+ 696   3            {
+ 697   4              break;
+ 698   4            }
+ 699   3            if((!D1)&&(!D2)&&(!D3)&&(!D4))
+ 700   3            {
+ 701   4              break;
+ 702   4            }
+ 703   3          }
+ 704   2        }
+ 705   1      }
+ 706          void backALaserModify()
+ 707          {
+ 708   1        backA();
+ 709   1        if(laserL||laserR)
+ 710   1        {
+ 711   2          while(laserL)
+ 712   2          {
+ 713   3            backcllaserL();
+ 714   3            if(!laserL)
+ 715   3            {
+ 716   4              break;
+ 717   4            }
+ 718   3            if(!DR)
+ 719   3            {
+ 720   4              break;
+ 721   4            }
+ 722   3          }
+ 723   2          while(laserR)
+ 724   2          {
+ 725   3            backcrlaserR();
+ 726   3            if(!laserR)
+ 727   3            {
+ 728   4              break;
+ 729   4            }
+ 730   3            if(!DR)
+ 731   3            {
+ 732   4              break;
+ 733   4            }
+ 734   3          }
+ 735   2        }
+ 736   1      }
+ 737          
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 13  
+
+ 738          void backBLaserModify()
+ 739          {
+ 740   1        backB();
+ 741   1        if(laserL||laserR)
+ 742   1        {
+ 743   2          while(laserL)
+ 744   2          {
+ 745   3            backcllaserL();
+ 746   3            if(!laserL)
+ 747   3            {
+ 748   4              break;
+ 749   4            }
+ 750   3            if(!DL)
+ 751   3            {
+ 752   4              break;
+ 753   4            }
+ 754   3          }
+ 755   2          while(laserR)
+ 756   2          {
+ 757   3            backcrlaserR();
+ 758   3            if(!laserR)
+ 759   3            {
+ 760   4              break;
+ 761   4            }
+ 762   3            if(!DL)
+ 763   3            {
+ 764   4              break;
+ 765   4            }
+ 766   3          }
+ 767   2        }
+ 768   1      }
+ 769          
+ 770          void ModifyCar()
+ 771          {
+ 772   1        stop();
+ 773   1        delay_ms(500);
+ 774   1        if((!DL||!D5||!D4)&&(!BL||!B0||!B1))
+ 775   1        {
+ 776   2          while(1)
+ 777   2          {
+ 778   3            //delay_ms(50);
+ 779   3            if((!DL)&&(!BL))
+ 780   3            {
+ 781   4              break;
+ 782   4            }
+ 783   3            if((!D5)&&(!B0))
+ 784   3            {
+ 785   4              break;
+ 786   4            }
+ 787   3            if((!D4)&&(!B1))
+ 788   3            {
+ 789   4              break;
+ 790   4            }
+ 791   3            if((!DR)&&(!BR))
+ 792   3            {
+ 793   4              break;
+ 794   4            }
+ 795   3            if((!B5)&&(!D0))
+ 796   3            {
+ 797   4              break;
+ 798   4            }
+ 799   3            if((!B4)&&(!D1))
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 14  
+
+ 800   3            {
+ 801   4              break;
+ 802   4            }
+ 803   3            if((!D2)&&(!B3))
+ 804   3            {
+ 805   4              break;
+ 806   4            }
+ 807   3            if((!D3)&&(!B2))
+ 808   3            {
+ 809   4              break;
+ 810   4            }
+ 811   3            if(!sonic)
+ 812   3            {
+ 813   4              break;
+ 814   4            }
+ 815   3            turnRModify();
+ 816   3          }
+ 817   2        }
+ 818   1        if((!DL||!D5||!D4)&&(!BR||!B5||!B4))
+ 819   1        {
+ 820   2          while(1)
+ 821   2          {
+ 822   3            //delay_ms(50);
+ 823   3            if((!DL)&&(!BL))
+ 824   3            {
+ 825   4              break;
+ 826   4            }
+ 827   3            if((!D5)&&(!B0))
+ 828   3            {
+ 829   4              break;
+ 830   4            }
+ 831   3            if((!D4)&&(!B1))
+ 832   3            {
+ 833   4              break;
+ 834   4            }
+ 835   3            if((!DR)&&(!BR))
+ 836   3            {
+ 837   4              break;
+ 838   4            }
+ 839   3            if((!B5)&&(!D0))
+ 840   3            {
+ 841   4              break;
+ 842   4            }
+ 843   3            if((!B4)&&(!D1))
+ 844   3            {
+ 845   4              break;
+ 846   4            }
+ 847   3            if((!D2)&&(!B3))
+ 848   3            {
+ 849   4              break;
+ 850   4            }
+ 851   3            if((!D3)&&(!B2))
+ 852   3            {
+ 853   4              break;
+ 854   4            }
+ 855   3            if(!sonic)
+ 856   3            {
+ 857   4              break;
+ 858   4            }
+ 859   3            turnLModify();
+ 860   3          }
+ 861   2        }
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 15  
+
+ 862   1        if((!DR||!D0||!D1)&&(!BL||!B0||!B1))
+ 863   1        {
+ 864   2          while(1)
+ 865   2          {
+ 866   3            //delay_ms(50);
+ 867   3            if((!DL)&&(!BL))
+ 868   3            {
+ 869   4              break;
+ 870   4            }
+ 871   3            if((!D5)&&(!B0))
+ 872   3            {
+ 873   4              break;
+ 874   4            }
+ 875   3            if((!D4)&&(!B1))
+ 876   3            {
+ 877   4              break;
+ 878   4            }
+ 879   3            if((!DR)&&(!BR))
+ 880   3            {
+ 881   4              break;
+ 882   4            }
+ 883   3            if((!B5)&&(!D0))
+ 884   3            {
+ 885   4              break;
+ 886   4            }
+ 887   3            if((!B4)&&(!D1))
+ 888   3            {
+ 889   4              break;
+ 890   4            }
+ 891   3            if((!D2)&&(!B3))
+ 892   3            {
+ 893   4              break;
+ 894   4            }
+ 895   3            if((!D3)&&(!B2))
+ 896   3            {
+ 897   4              break;
+ 898   4            }
+ 899   3            if(!sonic)
+ 900   3            {
+ 901   4              break;
+ 902   4            }
+ 903   3            turnLModify();
+ 904   3          }
+ 905   2        }
+ 906   1        if((!DR||!D0||!D1)&&(!BR||!B5||!B4))
+ 907   1        {
+ 908   2          while(1)
+ 909   2          {
+ 910   3            //delay_ms(50);
+ 911   3            if((!DL)&&(!BL))
+ 912   3            {
+ 913   4              break;
+ 914   4            }
+ 915   3            if((!D5)&&(!B0))
+ 916   3            {
+ 917   4              break;
+ 918   4            }
+ 919   3            if((!D4)&&(!B1))
+ 920   3            {
+ 921   4              break;
+ 922   4            }
+ 923   3            if((!DR)&&(!BR))
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 16  
+
+ 924   3            {
+ 925   4              break;
+ 926   4            }
+ 927   3            if((!B5)&&(!D0))
+ 928   3            {
+ 929   4              break;
+ 930   4            }
+ 931   3            if((!B4)&&(!D1))
+ 932   3            {
+ 933   4              break;
+ 934   4            }
+ 935   3            if((!D2)&&(!B3))
+ 936   3            {
+ 937   4              break;
+ 938   4            }
+ 939   3            if((!D3)&&(!B2))
+ 940   3            {
+ 941   4              break;
+ 942   4            }
+ 943   3            if(!sonic)
+ 944   3            {
+ 945   4              break;
+ 946   4            }
+ 947   3            turnRModify();
+ 948   3          }
+ 949   2        }
+ 950   1        stop();
+ 951   1        delay_ms(500);
+ 952   1      }
+ 953          void turnleft()
+ 954          {
+ 955   1        stop();
+ 956   1        delay_ms(1000);
+ 957   1        turnL();
+ 958   1        delay_ms(1400);//转弯延时
+ 959   1        stop();
+ 960   1        delay_ms(500);
+ 961   1        if((!DL)||(!DR))
+ 962   1        {
+ 963   2          while(!DL)
+ 964   2          {
+ 965   3            clDL(1);
+ 966   3            if(!D2||!D3)
+ 967   3            {
+ 968   4              break;
+ 969   4            }
+ 970   3          }
+ 971   2          while(!DR)
+ 972   2          {
+ 973   3            clDR(1);
+ 974   3            if(!D2||!D3)
+ 975   3            {
+ 976   4              break;
+ 977   4            }
+ 978   3          }
+ 979   2        }
+ 980   1        if((!D4)||(!D5))
+ 981   1        {
+ 982   2          while(!D4)
+ 983   2          {
+ 984   3            crD4(1);
+ 985   3            if(!D2||!D3)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 17  
+
+ 986   3            {
+ 987   4              break;
+ 988   4            }
+ 989   3          }
+ 990   2          while(!D5)
+ 991   2          {
+ 992   3            crD5(1);
+ 993   3            if(!D2||!D3)
+ 994   3            {
+ 995   4              break;
+ 996   4            }
+ 997   3          }
+ 998   2        }
+ 999   1        if((!D0)||(!D1))
+1000   1        {
+1001   2          while(!D0)
+1002   2          {
+1003   3            clD0(1);
+1004   3            if(!D2||!D3)
+1005   3            {
+1006   4              break;
+1007   4            }
+1008   3          }
+1009   2          while(!D1)
+1010   2          {
+1011   3            clD1(1);
+1012   3            if(!D2||!D3)
+1013   3            {
+1014   4              break;
+1015   4            }
+1016   3          }
+1017   2        }
+1018   1      }
+1019          
+1020          /*void turnleftsensor()
+1021          {
+1022            stop();
+1023            delay_ms(1000);
+1024            turnL();
+1025            delay_ms(500);
+1026            while(1)
+1027            {
+1028              turnL();
+1029              if((!D2)&&(!B3))
+1030              {
+1031                break;
+1032              }
+1033              if((!D3)&&(!B2))
+1034              {
+1035                break;
+1036              }
+1037            }
+1038            stop();
+1039            delay_ms(1000);
+1040          }*/
+1041          
+1042          void turnleftsensor()
+1043          {
+1044   1        stop();
+1045   1        delay_ms(1000);
+1046   1        turnL();
+1047   1        delay_ms(1000);
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 18  
+
+1048   1        while(1)
+1049   1        {
+1050   2          //turnL();
+1051   2          if(!Middle||!B2||!B3)
+1052   2          {
+1053   3            break;
+1054   3          }
+1055   2        }
+1056   1        stop();
+1057   1        delay_ms(1000);
+1058   1      }
+1059          
+1060          void turnleftn()
+1061          {
+1062   1        stop();
+1063   1        delay_ms(1000);
+1064   1        turnL();
+1065   1        delay_ms(1400);//转弯延时
+1066   1        stop();
+1067   1        delay_ms(500);
+1068   1      }
+1069          void turnright()
+1070          {
+1071   1        stop();
+1072   1        delay_ms(1400);
+1073   1        turnR();
+1074   1        delay_ms(1400);//转弯延时
+1075   1        stop();
+1076   1        delay_ms(500);
+1077   1        if((!DL)||(!DR))
+1078   1        {
+1079   2          while(!DL)
+1080   2          {
+1081   3            clDL(1);
+1082   3            if(!D2||!D3)
+1083   3            {
+1084   4              break;
+1085   4            }
+1086   3          }
+1087   2          while(!DR)
+1088   2          {
+1089   3            clDR(1);
+1090   3            if(!D2||!D3)
+1091   3            {
+1092   4              break;
+1093   4            }
+1094   3          }
+1095   2        }
+1096   1        if((!D4)||(!D5))
+1097   1        {
+1098   2          while(!D4)
+1099   2          {
+1100   3            crD4(1);
+1101   3            if(!D2||!D3)
+1102   3            {
+1103   4              break;
+1104   4            }
+1105   3          }
+1106   2          while(!D5)
+1107   2          {
+1108   3            crD5(1);
+1109   3            if(!D2||!D3)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 19  
+
+1110   3            {
+1111   4              break;
+1112   4            }
+1113   3          }
+1114   2        }
+1115   1        if((!D0)||(!D1))
+1116   1        {
+1117   2          while(!D0)
+1118   2          {
+1119   3            clD0(1);
+1120   3            if(!D2||!D3)
+1121   3            {
+1122   4              break;
+1123   4            }
+1124   3          }
+1125   2          while(!D1)
+1126   2          {
+1127   3            clD1(1);
+1128   3            if(!D2||!D3)
+1129   3            {
+1130   4              break;
+1131   4            }
+1132   3          }
+1133   2        }
+1134   1      }
+1135          
+1136          /*void turnrightsensor()
+1137          {
+1138            stop();
+1139            delay_ms(1000);
+1140            turnR();
+1141            delay_ms(500);
+1142            while(1)
+1143            {
+1144              turnR();
+1145              if((!D2)&&(!B3))
+1146              {
+1147                break;
+1148              }
+1149              if((!D3)&&(!B2))
+1150              {
+1151                break;
+1152              }
+1153            }
+1154            stop();
+1155            delay_ms(1000);
+1156          }*/
+1157          
+1158          void turnrightsensor()
+1159          {
+1160   1        stop();
+1161   1        delay_ms(1000);
+1162   1        turnR();
+1163   1        delay_ms(800);
+1164   1        while(1)
+1165   1        {
+1166   2          //turnR();
+1167   2          if(!Middle||!B2||!B3)
+1168   2          {
+1169   3            break;
+1170   3          }
+1171   2        }
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 20  
+
+1172   1        stop();
+1173   1        delay_ms(1000);
+1174   1      }
+1175          
+1176          void turnrightn()
+1177          {
+1178   1        stop();
+1179   1        delay_ms(1200);
+1180   1        turnR();
+1181   1        delay_ms(1400);//转弯延时
+1182   1        stop();
+1183   1        delay_ms(500);
+1184   1      }
+1185          
+1186          void turnleftdelay()
+1187          {
+1188   1        turnL();
+1189   1        delay_ms(1500);
+1190   1      }
+1191          
+1192          void turnrightdelay()
+1193          {
+1194   1        turnR();
+1195   1        delay_ms(1500);
+1196   1      }
+1197          
+1198          void turn180()
+1199          {
+1200   1        stop();
+1201   1        delay_ms(1000);
+1202   1        turnleftdelay();
+1203   1        /*while(1)
+1204   1        {
+1205   1          turnR();
+1206   1          if((!D2)&&(!B3))
+1207   1          {
+1208   1            break;
+1209   1          }
+1210   1          if((!D3)&&(!B2))
+1211   1          {
+1212   1            break;
+1213   1          }
+1214   1          if((!D4)&&(!B1))
+1215   1          {
+1216   1            break;
+1217   1          }
+1218   1          if((!D1)&&(!B4))
+1219   1          {
+1220   1            break;
+1221   1          }
+1222   1        }*/
+1223   1        while(1)
+1224   1        {
+1225   2          if(!Middle&&(!D2||!D3))
+1226   2          {
+1227   3            break;
+1228   3          }
+1229   2        }
+1230   1        stop();
+1231   1        delay_ms(1000);
+1232   1        /*delay_ms(500);
+1233   1        if((!DL)||(!DR))
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 21  
+
+1234   1        {
+1235   1          while(!DL)
+1236   1          {
+1237   1            clDL(1);
+1238   1            if(!D2||!D3)
+1239   1            {
+1240   1              break;
+1241   1            }
+1242   1          }
+1243   1          while(!DR)
+1244   1          {
+1245   1            clDR(1);
+1246   1            if(!D2||!D3)
+1247   1            {
+1248   1              break;
+1249   1            }
+1250   1          }
+1251   1        }
+1252   1        if((!D4)||(!D5))
+1253   1        {
+1254   1          while(!D4)
+1255   1          {
+1256   1            crD4(1);
+1257   1            if(!D2||!D3)
+1258   1            {
+1259   1              break;
+1260   1            }
+1261   1          }
+1262   1          while(!D5)
+1263   1          {
+1264   1            crD5(1);
+1265   1            if(!D2||!D3)
+1266   1            {
+1267   1              break;
+1268   1            }
+1269   1          }
+1270   1        }
+1271   1        if((!D0)||(!D1))
+1272   1        {
+1273   1          while(!D0)
+1274   1          {
+1275   1            clD0(1);
+1276   1            if(!D2||!D3)
+1277   1            {
+1278   1              break;
+1279   1            }
+1280   1          }
+1281   1          while(!D1)
+1282   1          {
+1283   1            clD1(1);
+1284   1            if(!D2||!D3)
+1285   1            {
+1286   1              break;
+1287   1            }
+1288   1          }
+1289   1        }*/
+1290   1      }
+1291          
+1292          void turn180L()
+1293          {
+1294   1        stop();
+1295   1        delay_ms(1000);
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 22  
+
+1296   1        turnleftdelay();
+1297   1        while(1)
+1298   1        {
+1299   2          //turnL();
+1300   2          /*if((!D2)&&(!B3))
+1301   2          {
+1302   2            break;
+1303   2          }
+1304   2          if((!D3)&&(!B2))
+1305   2          {
+1306   2            break;
+1307   2          }
+1308   2          if((!D4)&&(!B1))
+1309   2          {
+1310   2            break;
+1311   2          }
+1312   2          if((!D1)&&(!B4))
+1313   2          {
+1314   2            break;
+1315   2          }*/
+1316   2          if(!Middle&&(!D2||!D3))
+1317   2          {
+1318   3            break;
+1319   3          }
+1320   2        }
+1321   1        stop();
+1322   1        delay_ms(1000);
+1323   1      }
+1324          void gonesupplement()
+1325          {
+1326   1        gone();
+1327   1        delay_ms(350);
+1328   1      }
+1329          
+1330          void gonesupplement1()
+1331          {
+1332   1        gonenurseplatform();
+1333   1        delay_ms(10);
+1334   1      }
+1335          
+1336          void backsupplement()
+1337          {
+1338   1        goneback();
+1339   1        delay_ms(300);
+1340   1      }
+1341          
+1342          void steeringgoL()
+1343          {
+1344   1        hightR=35;
+1345   1        hightL=(abs(tempposition-512))*2+15+35;//调试测定
+1346   1        left(1);
+1347   1        right(1);
+1348   1      }
+1349          void steeringgoR()
+1350          {
+1351   1        hightR=(abs(tempposition-512))*2+35+15;//调试测定
+1352   1        hightL=15;
+1353   1        left(1);
+1354   1        right(1);
+1355   1      }
+1356          void SteeringModify()
+1357          {
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 23  
+
+1358   1        unsigned int position;
+1359   1        unsigned int flag;
+1360   1        tempposition=512;
+1361   1        position=512;
+1362   1        //for(position=512;position<1023;position++)
+1363   1        flag=0;
+1364   1        delay_ms(1000);
+1365   1        while(1)
+1366   1        {
+1367   2          /*if(!laserM)
+1368   2          {
+1369   2            delay_ms(5);
+1370   2            if(!laserM)
+1371   2            {
+1372   2              //tempposition=position;
+1373   2              break;
+1374   2            }
+1375   2          }*/
+1376   2          if(!sonic)
+1377   2          {
+1378   3            delay_ms(2);
+1379   3            if(!sonic)
+1380   3            {
+1381   4              SetServoPosition1(3,tempposition,100);
+1382   4              break;
+1383   4            }
+1384   3          }
+1385   2          SetServoPosition1(3,position,100);
+1386   2          delay_ms(50);
+1387   2          if(!lasersteering)
+1388   2          {
+1389   3            delay_ms(2);
+1390   3            if(!lasersteering)
+1391   3            {
+1392   4              SetServoPosition1(3,position,100);
+1393   4              delay_ms(1000);
+1394   4              tempposition=position;
+1395   4              flag=1;
+1396   4              break;
+1397   4            }
+1398   3          }
+1399   2          position=position-10;
+1400   2          if(position<400)
+1401   2          {
+1402   3            break;
+1403   3          }
+1404   2        }
+1405   1        //position=512;
+1406   1        if(flag==0)
+1407   1        {
+1408   2          while(1)
+1409   2          {
+1410   3            /*if(!laserM)
+1411   3            {
+1412   3              delay_ms(5);
+1413   3              if(!laserM)
+1414   3              {
+1415   3                //tempposition=position;
+1416   3                break;
+1417   3              }
+1418   3            }*/
+1419   3            if(!sonic)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 24  
+
+1420   3            {
+1421   4              delay_ms(2);
+1422   4              if(!sonic)
+1423   4              {
+1424   5                SetServoPosition1(3,tempposition,100);
+1425   5                break;
+1426   5              }
+1427   4            }
+1428   3            SetServoPosition1(3,position,100);
+1429   3            delay_ms(50);
+1430   3            if(!lasersteering)
+1431   3            {
+1432   4              delay_ms(2);
+1433   4              if(!lasersteering)
+1434   4              {
+1435   5                SetServoPosition1(3,position,100);
+1436   5                delay_ms(1000);
+1437   5                tempposition=position;
+1438   5                break;
+1439   5              }
+1440   4            }
+1441   3            position=position+10;
+1442   3            if(position>600)
+1443   3            {
+1444   4              break;
+1445   4            }
+1446   3          }
+1447   2        }
+1448   1        if(tempposition<=512)
+1449   1        {
+1450   2          while(1)
+1451   2          {
+1452   3            if(!sonic)
+1453   3            {
+1454   4              delay_ms(2);
+1455   4              if(!sonic)
+1456   4              {
+1457   5                SetServoPosition1(3,tempposition,100);
+1458   5                break;
+1459   5              }
+1460   4            }
+1461   3            steeringgoL();
+1462   3            delay_ms(120);
+1463   3            stop();
+1464   3            delay_ms(200);
+1465   3            /*if(!laserM)
+1466   3            {
+1467   3              delay_ms(3);
+1468   3              if(!laserM)
+1469   3              {
+1470   3                break;
+1471   3              }
+1472   3            }*/
+1473   3            if(lasersteering)
+1474   3            {
+1475   4              delay_ms(3);
+1476   4              if(lasersteering)
+1477   4              {
+1478   5                stop();
+1479   5                delay_ms(50);
+1480   5                break;
+1481   5              }
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 25  
+
+1482   4            }
+1483   3          }
+1484   2          //delay_ms(150);//调试测定
+1485   2        }
+1486   1        else
+1487   1        {
+1488   2          while(1)
+1489   2          {
+1490   3            if(!sonic)
+1491   3            {
+1492   4              delay_ms(2);
+1493   4              if(!sonic)
+1494   4              {
+1495   5                SetServoPosition1(3,tempposition,100);
+1496   5                break;
+1497   5              }
+1498   4            }
+1499   3            steeringgoR();
+1500   3            delay_ms(120);
+1501   3            stop();
+1502   3            delay_ms(200);
+1503   3                /*if(!laserM)
+1504   3                {
+1505   3                  delay_ms(3);
+1506   3                  if(!laserM)
+1507   3                  {
+1508   3                    break;
+1509   3                  }
+1510   3                }*/
+1511   3            if(lasersteering)
+1512   3            {
+1513   4              delay_ms(3);
+1514   4              if(lasersteering)
+1515   4              {
+1516   5                stop();
+1517   5                delay_ms(50);
+1518   5                break;
+1519   5              }
+1520   4            }
+1521   3          }
+1522   2              //delay_ms(150);//调试测定
+1523   2        }
+1524   1      }
+1525          
+1526          void voice()
+1527          {
+1528   1        Voice=0;
+1529   1        delay_ms(2000);
+1530   1        Voice=1;
+1531   1      }
+1532          
+1533          void turnbackL()
+1534          {
+1535   1        stop();
+1536   1        delay_ms(1000);
+1537   1        turnL();
+1538   1        delay_ms(800);
+1539   1        while(1)
+1540   1        {
+1541   2          turnL();
+1542   2          if(!B3)
+1543   2          {
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 26  
+
+1544   3            delay_ms(3);
+1545   3            if(!B3)
+1546   3            {
+1547   4              stop();
+1548   4              delay_ms(1000);
+1549   4              break;
+1550   4            }
+1551   3          }
+1552   2        }
+1553   1      }
+1554          
+1555          void turnbackR()
+1556          {
+1557   1        stop();
+1558   1        delay_ms(1000);
+1559   1        turnR();
+1560   1        delay_ms(800);
+1561   1        while(1)
+1562   1        {
+1563   2          turnR();
+1564   2          if(!B2)
+1565   2          {
+1566   3            delay_ms(3);
+1567   3            if(!B2)
+1568   3            {
+1569   4              stop();
+1570   4              delay_ms(1000);
+1571   4              break;
+1572   4            }
+1573   3          }
+1574   2        }
+1575   1      }
+1576          
+1577          void Makewardrounds()
+1578          {
+1579   1        while(1)  //从出发区域出发第一个路口
+1580   1        {
+1581   2         gone();
+1582   2         if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1583   2         {
+1584   3          go();
+1585   3          delay_ms(800);
+1586   3          break;
+1587   3         }
+1588   2        }
+1589   1        /*while(1)//第二个路口
+1590   1        {
+1591   1          gone();
+1592   1          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1593   1          {
+1594   1            //go();
+1595   1            //delay_ms(70);//第二个路口前进延时
+1596   1            turnleftsensor();
+1597   1            gonesupplement();
+1598   1            break;
+1599   1          }
+1600   1        }
+1601   1        while(1)//第三个路口
+1602   1        {
+1603   1          gone();
+1604   1          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1605   1          {
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 27  
+
+1606   1            //go();
+1607   1            //delay_ms(300);//前进延时
+1608   1            //turnrightn();
+1609   1            turnrightsensor();
+1610   1            gonesupplement();
+1611   1            break;
+1612   1          }
+1613   1        }*/
+1614   1        while(1)//第二个路口
+1615   1        {
+1616   2          gone();
+1617   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1618   2          {
+1619   3            //go();
+1620   3            //delay_ms(70);//第二个路口前进延时
+1621   3            turnrightsensor();
+1622   3            backsupplement();
+1623   3            break;
+1624   3          }
+1625   2        }
+1626   1        while(1)//第三个路口
+1627   1        {
+1628   2          goneback();
+1629   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1630   2          {
+1631   3            //go();
+1632   3            //delay_ms(300);//前进延时
+1633   3            //turnrightn();
+1634   3            back();
+1635   3            delay_ms(100);
+1636   3            turnleftsensor();
+1637   3            gonesupplement();
+1638   3            break;
+1639   3          }
+1640   2        }
+1641   1        while(1)//到达床头柜A
+1642   1        {
+1643   2          goLaserModify();
+1644   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1645   2          {
+1646   3            go();
+1647   3            delay_ms(200);
+1648   3            stop();
+1649   3            voice();
+1650   3            delay_ms(5000);
+1651   3            backALaserModify();
+1652   3            delay_ms(2500);
+1653   3            break;
+1654   3          }
+1655   2        }
+1656   1        while(1)//退回到Q点
+1657   1        {
+1658   2          backALaserModify();
+1659   2          /*if(!DR)
+1660   2          {
+1661   2            turnright();
+1662   2            gonesupplement();
+1663   2            break;
+1664   2          }*/
+1665   2          if(!DR)
+1666   2          {
+1667   3            turnbackL();
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 28  
+
+1668   3            backsupplement();
+1669   3            break;
+1670   3          }
+1671   2        }
+1672   1        /*while(1)//Q点到R点
+1673   1        {
+1674   1          gone();
+1675   1          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1676   1          {
+1677   1           go();
+1678   1           delay_ms(500);
+1679   1           break;
+1680   1          }
+1681   1        }*/
+1682   1        while(1)//Q点到R点
+1683   1        {
+1684   2          goneback();
+1685   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1686   2          {
+1687   3           goneback();
+1688   3           delay_ms(500);
+1689   3           break;
+1690   3          }
+1691   2        }
+1692   1        /*while(1)//R点到S点
+1693   1        {
+1694   1          gone();
+1695   1          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1696   1          {
+1697   1            //go();
+1698   1            //delay_ms(300);//
+1699   1            turnleftsensor();
+1700   1            gonesupplement();
+1701   1            break;
+1702   1          }
+1703   1        }*/
+1704   1        while(1)//R点到S点
+1705   1        {
+1706   2          goneback();
+1707   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1708   2          {
+1709   3            //go();
+1710   3            //delay_ms(300);//
+1711   3            turnbackR();
+1712   3            gonesupplement();
+1713   3            break;
+1714   3          }
+1715   2        }
+1716   1        while(1)//到达床头柜B
+1717   1        {
+1718   2          goLaserModify();
+1719   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1720   2          {
+1721   3            go();
+1722   3            delay_ms(300);
+1723   3            stop();
+1724   3            voice();
+1725   3            delay_ms(5000);
+1726   3            backBLaserModify();
+1727   3            delay_ms(2500);
+1728   3            break;
+1729   3          }
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 29  
+
+1730   2        }
+1731   1        /*while(1)//退回到S点
+1732   1        {
+1733   1          backBLaserModify();
+1734   1          if(!DL)
+1735   1          {
+1736   1            turnrightn();
+1737   1            backsupplement();
+1738   1            break;
+1739   1          }
+1740   1        }*/
+1741   1        while(1)//退回到S点
+1742   1        {
+1743   2          backBLaserModify();
+1744   2          if(!DL)
+1745   2          {
+1746   3            turnbackR();
+1747   3            backsupplement();
+1748   3            break;
+1749   3          }
+1750   2        }
+1751   1        /*while(1)//S点到R点
+1752   1        {
+1753   1          goneback();
+1754   1          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1755   1          {
+1756   1            turnleftn();
+1757   1            backsupplement();
+1758   1            break;    }
+1759   1        }*/
+1760   1        while(1)//S点到R点
+1761   1        {
+1762   2          goneback();
+1763   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1764   2          {
+1765   3            back();
+1766   3            delay_ms(100);
+1767   3            turnbackL();
+1768   3            backsupplement();
+1769   3            break;    }
+1770   2        }
+1771   1        while(1)//R点到起点白线，返回到终点区
+1772   1        {
+1773   2          goneback();
+1774   2          if((!B1)&&(!B2)&&(!B3)&&(!B4))
+1775   2          {
+1776   3            backbegin();
+1777   3            delay_ms(1200);
+1778   3            //stop();
+1779   3            break;
+1780   3          }
+1781   2        }
+1782   1      }
+1783          void GivingMedicine()//送药方案,取药瓶
+1784          {
+1785   1        stop();
+1786   1        SetServoPosition1(1,200,500);  //夹子关
+1787   1        SetServoPosition1(2,0,500);  //夹子下降到最低点
+1788   1        SetServoPosition1(3,512,500);  //旋转舵机初始化
+1789   1        delay_ms(2000);
+1790   1        while(1)//直走到第一根白线上
+1791   1        {
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 30  
+
+1792   2          gone();
+1793   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1794   2          {
+1795   3            go();
+1796   3            delay_ms(600);
+1797   3            break;
+1798   3          }
+1799   2        }
+1800   1        /*while(1)//直走到第二根白线上，右转取药瓶
+1801   1        {
+1802   1          gone();
+1803   1          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1804   1          {
+1805   1            //go();
+1806   1            //delay_ms(70);
+1807   1            turnrightsensor();
+1808   1            gonesupplement();
+1809   1            break;
+1810   1          }
+1811   1        }
+1812   1        while(1)//到达S点，右转
+1813   1        {
+1814   1          gone();
+1815   1          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1816   1          {
+1817   1            //control=0;
+1818   1            stop();
+1819   1            delay_ms(500);
+1820   1            SetServoPosition1(1,30,500);  //夹子开
+1821   1            turnrightsensor();
+1822   1            while(1)
+1823   1            {
+1824   1              gonurseplatform();
+1825   1              if(!BR)
+1826   1              {
+1827   1                delay_ms(3);
+1828   1                if(!BR)
+1829   1                {
+1830   1                  go();
+1831   1                  delay_ms(70);
+1832   1                  stop();
+1833   1                  delay_ms(1000);
+1834   1                  break;
+1835   1                }
+1836   1              }
+1837   1            }
+1838   1            ModifyCar();
+1839   1            //gonesupplement1();
+1840   1            break;
+1841   1          }
+1842   1        }*/
+1843   1        while(1)//直走到第二根白线上，右转取药瓶
+1844   1        {
+1845   2          gone();
+1846   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1847   2          {
+1848   3            //go();
+1849   3            //delay_ms(70);
+1850   3            turnleftsensor();
+1851   3            //gonesupplement();
+1852   3            goneback();
+1853   3            delay_ms(1000);
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 31  
+
+1854   3            break;
+1855   3          }
+1856   2        }
+1857   1        while(1)//到达S点，右转
+1858   1        {
+1859   2          goneback();
+1860   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1861   2          {
+1862   3            //control=0;
+1863   3            back();
+1864   3            delay_ms(100);
+1865   3            stop();
+1866   3            delay_ms(500);
+1867   3            SetServoPosition1(1,30,500);  //夹子开
+1868   3            turnleftsensor();
+1869   3            while(1)
+1870   3            {
+1871   4              gonenurseplatform();
+1872   4              if(!BR)
+1873   4              {
+1874   5                delay_ms(3);
+1875   5                if(!BR)
+1876   5                {
+1877   6                  go();
+1878   6                  delay_ms(70);
+1879   6                  stop();
+1880   6                  delay_ms(1000);
+1881   6                  break;
+1882   6                }
+1883   5              }
+1884   4            }
+1885   3            //ModifyCar();
+1886   3            //gonesupplement1();
+1887   3            break;
+1888   3          }
+1889   2        }
+1890   1        while(1)//直走到护士台
+1891   1        {
+1892   2          SteeringModify();
+1893   2          if(!sonic)
+1894   2          {
+1895   3            delay_ms(2);
+1896   3            if(!sonic)
+1897   3            {
+1898   4              break;
+1899   4            }
+1900   3          }
+1901   2        }
+1902   1        while(1)
+1903   1        {
+1904   2          stop();
+1905   2          delay_ms(1000);
+1906   2          SetServoPosition1(1,200,500);  //夹子关
+1907   2          delay_ms(1000);
+1908   2          //control=1;
+1909   2          //ModifyCar();
+1910   2          break;
+1911   2        }
+1912   1      }
+1913          /*void GivingMedicineOne()//送药方案1
+1914          {
+1915            while(1)//退回到S点，右转
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 32  
+
+1916            {
+1917              //backLaserModify();
+1918              //goneback();
+1919              back();
+1920              if(!DR)
+1921              {
+1922                //back();
+1923                //delay_ms(650);
+1924                turnright();
+1925                SetServoPosition1(3,512,500);  //旋转舵机转正
+1926                gonesupplement();
+1927                break;
+1928              }
+1929            }
+1930            while(1)//直走到R点
+1931            {
+1932              gone();
+1933              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1934              {
+1935                gone();
+1936                delay_ms(1000);
+1937                break;
+1938              }
+1939            }
+1940            while(1)//送药1右转
+1941            {
+1942              gone();
+1943              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1944              {
+1945                stop();
+1946                SetServoPosition1(2,1000,500);  //夹子上升到到最高点
+1947                delay_ms(1000);
+1948                turnrightn();
+1949                gonesupplement();
+1950                break;
+1951              }
+1952            }
+1953            while(1)//走到床头柜A
+1954            {
+1955              goLaserModify();
+1956              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1957              {
+1958                go();
+1959                delay_ms(300);//送药延时，需要调试确定
+1960                stop();
+1961                SetServoPosition1(1,30,100);//夹子开，放第一个药瓶
+1962                delay_ms(2000);
+1963                backALaserModify();
+1964                delay_ms(1000);
+1965                break;
+1966              }
+1967            }
+1968            while(1)//退回到Q点
+1969            {
+1970              backALaserModify();
+1971              if(!DR)
+1972              {
+1973                //back();
+1974                //delay_ms(650);
+1975                stop();
+1976                delay_ms(1000);     
+1977                SetServoPosition1(2,0,400);//夹子下降
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 33  
+
+1978                turnright();
+1979                gonesupplement();
+1980                break;
+1981              }
+1982            }
+1983            while(1)//Q点到R点
+1984            {
+1985              gone();
+1986              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1987              {
+1988               go();
+1989               delay_ms(1000);
+1990               break;
+1991              }
+1992            }
+1993            while(1)//直走到S点，右转
+1994            {
+1995              gone();
+1996              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+1997              {
+1998                //control=0;
+1999                stop();
+2000                delay_ms(200);
+2001                turnright();
+2002                while(1)
+2003                {
+2004                  gonurseplatform();
+2005                  if(!BR)
+2006                  {
+2007                    delay_ms(3);
+2008                    if(!BR)
+2009                    {
+2010                      go();
+2011                      delay_ms(70);
+2012                      stop();
+2013                      delay_ms(1000);
+2014                      break;
+2015                    }
+2016                  }
+2017                }
+2018                ModifyCar();
+2019                stop();
+2020                delay_ms(1000);
+2021                break;
+2022              }
+2023            }
+2024            while(1)//旋转舵机扫描直走到护士台
+2025            {
+2026              SteeringModify();
+2027              //gonurseplatform();*/
+2028              /*if(!laserM)
+2029              {
+2030                delay_ms(5);
+2031                if(!laserM)
+2032                {
+2033                  stop();
+2034                  delay_ms(1000);
+2035                  SetServoPosition1(1,600,500);//夹子合拢，取第二个药瓶
+2036                  delay_ms(1000);
+2037                  break;
+2038                }
+2039              }*/
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 34  
+
+2040              /*if(!sonic)
+2041              {
+2042                delay_ms(3);
+2043                if(!sonic)
+2044                {
+2045                  stop();
+2046                  delay_ms(1000);
+2047                  gonurseplatform();
+2048                  delay_ms(1550);
+2049                  stop();
+2050                  delay_ms(1000);
+2051                  SetServoPosition1(1,200,500);//夹子合拢，取第二个药瓶
+2052                  delay_ms(1000);
+2053                  break;
+2054                }
+2055              }
+2056            }
+2057            while(1)//退回到S点，转180度
+2058            {
+2059              //control=1;
+2060              backALaserModify();
+2061              delay_ms(1000);
+2062              turn180();
+2063              stop();
+2064              delay_ms(500);
+2065              SetServoPosition1(3,512,500);  //旋转舵机转正
+2066              SetServoPosition1(2,1000,500);//夹子上升到最高点
+2067              delay_ms(1000);
+2068              gonesupplement();
+2069              break;
+2070            }
+2071            while(1)//直走到床头柜B
+2072            {
+2073              goLaserModify();
+2074              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2075              {
+2076                go();
+2077                delay_ms(350);//送药延时，需要调试确定
+2078                stop();
+2079                SetServoPosition1(1,30,100);//夹子打开，放第二个药瓶
+2080                delay_ms(2000);
+2081                backBLaserModify();
+2082                delay_ms(1000);
+2083                break;
+2084              }
+2085            }
+2086            while(1)//退回到S点，左转
+2087            {
+2088              backBLaserModify();
+2089              if((!DL))
+2090              {
+2091                //back();
+2092                //delay_ms(680);
+2093                SetServoPosition1(2,0,500);//夹子下降
+2094                turnleft();
+2095                gonesupplement();
+2096                break;
+2097              }
+2098            }
+2099            while(1)//直走到R点，左转
+2100            {
+2101              gone();
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 35  
+
+2102              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2103              {
+2104                turnleft();
+2105                gonesupplement();
+2106                break;
+2107              }
+2108            }
+2109            while(1)//直走到起点区的第一根白线
+2110            {
+2111              gone();
+2112              if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2113              {
+2114                go();
+2115                delay_ms(1200);//延时到终点区
+2116                stop();//停止
+2117                break;
+2118              }
+2119            }
+2120          }*/
+2121          
+2122          void GivingMedicineOne()
+2123          {
+2124   1        while(1)
+2125   1        {
+2126   2          goneback();
+2127   2          if(!DR)
+2128   2          {
+2129   3            turnleftsensor();
+2130   3            SetServoPosition1(3,512,500);  //旋转舵机转正
+2131   3            backsupplement();
+2132   3            break;
+2133   3          }
+2134   2        }
+2135   1        while(1)
+2136   1        {
+2137   2          goneback();
+2138   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2139   2          {
+2140   3            goneback();
+2141   3            delay_ms(1000);
+2142   3            break;
+2143   3          }
+2144   2        }
+2145   1        while(1)
+2146   1        {
+2147   2          goneback();
+2148   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2149   2          {
+2150   3            back();
+2151   3            delay_ms(100);
+2152   3            turnleftsensor();
+2153   3            SetServoPosition1(2,1000,500);  //夹子上升到最高处
+2154   3            go();
+2155   3            delay_ms(250);
+2156   3            break;
+2157   3          }
+2158   2        }
+2159   1        while(1)
+2160   1        {
+2161   2          goLaserModify();
+2162   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2163   2          {
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 36  
+
+2164   3            go();
+2165   3            delay_ms(300);
+2166   3            stop();
+2167   3            SetServoPosition1(1,30,100);//夹子开，放第一个药瓶
+2168   3            delay_ms(2000);
+2169   3            backALaserModify();
+2170   3            delay_ms(2500);
+2171   3            break;
+2172   3          }
+2173   2        }
+2174   1        while(1)
+2175   1        {
+2176   2          backALaserModify();
+2177   2          if(!DR)
+2178   2          {
+2179   3            SetServoPosition1(2,0,500);  //夹子下降到最低点
+2180   3            turnleftsensor();
+2181   3            backsupplement();
+2182   3            goneback();
+2183   3            delay_ms(300);
+2184   3            break;
+2185   3          }
+2186   2        }
+2187   1        while(1)
+2188   1        {
+2189   2          goneback();
+2190   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2191   2          {
+2192   3            goneback();
+2193   3            delay_ms(1000);
+2194   3            break;
+2195   3          }
+2196   2        }
+2197   1        while(1)
+2198   1        {
+2199   2          goneback();
+2200   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2201   2          {
+2202   3            back();
+2203   3            delay_ms(100);
+2204   3            turnleftsensor();
+2205   3            while(1)
+2206   3            {
+2207   4              gonenurseplatform();
+2208   4              if(!BR)
+2209   4              {
+2210   5                delay_ms(3);
+2211   5                if(!BR)
+2212   5                {
+2213   6                  go();
+2214   6                  delay_ms(70);
+2215   6                  //ModifyCar();
+2216   6                  stop();
+2217   6                  delay_ms(1000);
+2218   6                  break;
+2219   6                }
+2220   5              }
+2221   4            }
+2222   3            break;
+2223   3          }
+2224   2        }
+2225   1        while(1)
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 37  
+
+2226   1        {
+2227   2          SteeringModify();
+2228   2          if(!sonic)
+2229   2          {
+2230   3            delay_ms(3);
+2231   3            if(!sonic)
+2232   3            {
+2233   4              stop();
+2234   4              delay_ms(1000);
+2235   4              gonenurseplatform();
+2236   4              delay_ms(850);
+2237   4              stop();
+2238   4              delay_ms(1000);
+2239   4              SetServoPosition1(1,200,500);//夹子合拢，取第二个药瓶
+2240   4              delay_ms(1000);
+2241   4              break;
+2242   4            }
+2243   3          }
+2244   2        }
+2245   1        while(1)
+2246   1        {
+2247   2          goneback();
+2248   2          delay_ms(1100);
+2249   2          turn180();
+2250   2          stop();
+2251   2          delay_ms(500);
+2252   2          SetServoPosition1(3,512,500);  //旋转舵机转正
+2253   2          SetServoPosition1(2,1000,500);//夹子上升到最高点
+2254   2          delay_ms(1000);
+2255   2          gone();
+2256   2          delay_ms(2000);
+2257   2          break;
+2258   2        }
+2259   1        while(1)//直走到床头柜B
+2260   1        {
+2261   2          goLaserModify();
+2262   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2263   2          {
+2264   3            go();
+2265   3            delay_ms(350);//送药延时，需要调试确定
+2266   3            stop();
+2267   3            SetServoPosition1(1,30,100);//夹子打开，放第二个药瓶
+2268   3            delay_ms(2000);
+2269   3            backBLaserModify();
+2270   3            delay_ms(2500);
+2271   3            break;
+2272   3          }
+2273   2        }
+2274   1        while(1)
+2275   1        {
+2276   2          backBLaserModify();
+2277   2          if(!DL)
+2278   2          {
+2279   3            SetServoPosition1(2,0,500);  //夹子下降到最低点
+2280   3            turnrightsensor();
+2281   3            backsupplement();
+2282   3            break;
+2283   3          }
+2284   2        }
+2285   1        while(1)
+2286   1        {
+2287   2          goneback();
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 38  
+
+2288   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2289   2          {
+2290   3            back();
+2291   3            delay_ms(100);
+2292   3            turnleftsensor();
+2293   3            backsupplement();
+2294   3            break;
+2295   3          }
+2296   2        }
+2297   1        while(1)
+2298   1        {
+2299   2          goneback();
+2300   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2301   2          {
+2302   3            goneback();
+2303   3            delay_ms(1000);
+2304   3            stop();
+2305   3            break;
+2306   3          }
+2307   2        }
+2308   1      }
+2309          void GivingMedicineTwo()//送药方案2
+2310          {
+2311   1        while(1)//退回到S点，转180度
+2312   1        {
+2313   2          /*backLaserModify();
+2314   2          if((!BR))
+2315   2          {
+2316   2            back();
+2317   2            delay_ms(500);
+2318   2            turn180();
+2319   2            stop();
+2320   2            SetServoPosition1(2,1000,500);//夹子上升
+2321   2            break;
+2322   2          }*/
+2323   2          backALaserModify();
+2324   2          delay_ms(1000);
+2325   2          turn180();
+2326   2          stop();
+2327   2          SetServoPosition1(2,1000,500);//夹子上升
+2328   2          SetServoPosition1(3,512,500);  //旋转舵机转正
+2329   2          delay_ms(1000);
+2330   2          break;
+2331   2        }
+2332   1        while(1)//直走到床头柜B
+2333   1        {
+2334   2          goLaserModify();
+2335   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2336   2          {
+2337   3            go();
+2338   3            delay_ms(300);
+2339   3            stop();
+2340   3            SetServoPosition1(1,30,100);//夹子打开，放第一个药瓶
+2341   3            delay_ms(2000);
+2342   3            backBLaserModify();
+2343   3            delay_ms(1000);
+2344   3            break;
+2345   3          }
+2346   2        }
+2347   1        while(1)//退回到S点，转180度
+2348   1        {
+2349   2          backBLaserModify();
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 39  
+
+2350   2          if((!DL))
+2351   2          {
+2352   3            //control=0;
+2353   3            back();
+2354   3            delay_ms(400);
+2355   3            stop();
+2356   3            delay_ms(500);
+2357   3            SetServoPosition1(2,0,500);//夹子下降
+2358   3            turn180L();
+2359   3            //turn180();
+2360   3            while(1)
+2361   3            {
+2362   4              gonurseplatform();
+2363   4              if(!BR)
+2364   4              {
+2365   5                delay_ms(3);
+2366   5                if(!BR)
+2367   5                {
+2368   6                  go();
+2369   6                  delay_ms(70);
+2370   6                  stop();
+2371   6                  delay_ms(500);
+2372   6                  break;
+2373   6                }
+2374   5              }
+2375   4            }
+2376   3            ModifyCar();
+2377   3            break;
+2378   3          }
+2379   2        }
+2380   1        while(1)//直走到护士台
+2381   1        {
+2382   2          SteeringModify();
+2383   2          //gonurseplatform();
+2384   2          if(!sonic)
+2385   2          {
+2386   3            delay_ms(3);
+2387   3            if(!sonic)
+2388   3            {
+2389   4              stop();
+2390   4              delay_ms(1000);
+2391   4              gonurseplatform();
+2392   4              delay_ms(1600);
+2393   4              stop();
+2394   4              delay_ms(500);
+2395   4              SetServoPosition1(1,200,500);//夹子合拢，取第二个药瓶
+2396   4              delay_ms(2000);
+2397   4              break;
+2398   4            }
+2399   3          }
+2400   2        }
+2401   1        while(1)//退回到S点，右转
+2402   1        {
+2403   2          backALaserModify();
+2404   2          if(!DR)
+2405   2          {
+2406   3            stop();
+2407   3            SetServoPosition1(3,512,500);  //旋转舵机转正
+2408   3            delay_ms(500);
+2409   3            turnleftsensor();
+2410   3            backsupplement();
+2411   3            //control=1;
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 40  
+
+2412   3            break;
+2413   3          }
+2414   2        }
+2415   1        while(1)//直走到R点
+2416   1        {
+2417   2          goneback();
+2418   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2419   2          {
+2420   3            goneback();
+2421   3            delay_ms(1000);
+2422   3            break;
+2423   3          }
+2424   2        }
+2425   1        while(1)//送药2右转
+2426   1        {
+2427   2          goneback();
+2428   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2429   2          {
+2430   3            stop();
+2431   3            SetServoPosition1(2,900,500);//夹子上升
+2432   3            delay_ms(500);
+2433   3            turnleftsensor();
+2434   3            gonesupplement();
+2435   3            break;
+2436   3          }
+2437   2        }
+2438   1        while(1)//走到床头柜A
+2439   1        {
+2440   2          goLaserModify();
+2441   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2442   2          {
+2443   3            go();
+2444   3            delay_ms(250);//送药延时，需要调试确定
+2445   3            stop();
+2446   3            SetServoPosition1(1,30,100);//夹子开，放第二个药瓶
+2447   3            delay_ms(2000);
+2448   3            backALaserModify();
+2449   3            delay_ms(2500);
+2450   3            break;
+2451   3          }
+2452   2        }
+2453   1        while(1)//退回到Q点
+2454   1        {
+2455   2          backALaserModify();
+2456   2          if(!DR)
+2457   2          {
+2458   3            stop();
+2459   3            SetServoPosition1(2,0,500);//夹子下降
+2460   3            delay_ms(500);
+2461   3            turnleftsensor();
+2462   3            backsupplement();
+2463   3            break;
+2464   3          }
+2465   2        }
+2466   1        while(1)
+2467   1        {
+2468   2          goneback();
+2469   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2470   2          {
+2471   3            turnrightsensor();
+2472   3            backsupplement();
+2473   3            break;
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 41  
+
+2474   3          }
+2475   2        }
+2476   1        while(1)
+2477   1        {
+2478   2          goneback();
+2479   2          if((!D1)&&(!D2)&&(!D3)&&(!D4))
+2480   2          {
+2481   3            back();
+2482   3            delay_ms(1200);
+2483   3            stop();
+2484   3            break;
+2485   3          }
+2486   2        }
+2487   1      }
+2488          void main()
+2489          {
+2490   1        init();
+2491   1        //initlaserm();
+2492   1        uart1_init();
+2493   1        delay_ms(1000);
+2494   1        //InitADC();
+2495   1        SetServoPosition1(1,200,500);  //夹子关
+2496   1        //SetServoPosition1(1,30,500);  //夹子开
+2497   1        //SetServoPosition1(2,0,500);  //夹子下降到最低点
+2498   1        SetServoPosition1(2,1000,500);  //夹子上升到到最高点
+2499   1        //delay_ms(1000);
+2500   1        //SetServoPosition1(2,0,500);  //夹子下降到最低点
+2501   1        SetServoPosition1(3,512,500);  //旋转舵机初始化
+2502   1        //delay_ms(500);
+2503   1        //SetServoPosition1(3,300,500);  //旋转舵机向右转
+2504   1        if(k1==0)
+2505   1        {
+2506   2          delay_ms(5);
+2507   2          if(k1==0)
+2508   2          {
+2509   3            Makewardrounds();
+2510   3            GivingMedicine();
+2511   3            GivingMedicineOne();
+2512   3            while(1)
+2513   3            {
+2514   4              stop();
+2515   4            }
+2516   3          }
+2517   2        }
+2518   1        if(k2==0)
+2519   1        {
+2520   2          delay_ms(5);
+2521   2          if(k2==0)
+2522   2          {
+2523   3            Makewardrounds();
+2524   3            GivingMedicine();
+2525   3            GivingMedicineTwo();
+2526   3          }
+2527   2        }
+2528   1      }
+2529          
+2530          void time0() interrupt 1
+2531          {
+2532   1        TR0=0;
+2533   1        if(count==hightL)
+2534   1        {
+2535   2          ENA=0;
+C51 COMPILER V9.53.0.0   MEDICALSERVICE                                                    09/06/2018 20:44:21 PAGE 42  
+
+2536   2        }
+2537   1        if(count==hightR)
+2538   1        {
+2539   2          ENB=0;
+2540   2        }
+2541   1        if(count==num)
+2542   1        {
+2543   2          count=0;
+2544   2          ENA=1;
+2545   2          ENB=1;
+2546   2        }
+2547   1        count++;
+2548   1        TR0=1; 
+2549   1      }
+2550          
+2551          /*void laserm() interrupt 3
+2552          {
+2553            TH1=(65536-10000)/256;  
+2554            TL1=(65536-10000)%256;
+2555            TR1=0;
+2556            if(!laserM)
+2557            {
+2558              delay_ms(5);
+2559              if(!laserM)
+2560              {
+2561                lasermiddle=0;
+2562              }
+2563              else
+2564              {
+2565                lasermiddle=1;
+2566              }
+2567            }
+2568            TR1=1;
+2569          }*/
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   5226    ----
+   CONSTANT SIZE    =     75    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     12      32
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       2
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

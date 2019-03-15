@@ -1,0 +1,2569 @@
+#include<reg52.h>
+#include <math.h>
+ #include <intrins.h>
+ #include "CDS5516.h"
+ #include"ADC.H"
+ /***电机控制引脚*****/
+  sbit ML1=P0^2;
+  sbit ML2=P0^3;
+  sbit MR1=P0^4;
+  sbit MR2=P0^5;
+ /*****使能端******/
+  sbit ENA=P0^0;
+  sbit ENB=P0^1;
+ /*******传感器前****/
+ sbit D0=P0^6;
+ sbit D1=P0^7;
+ sbit D2=P1^1;
+ sbit D3=P1^2;
+ sbit D4=P1^3;
+ sbit D5=P1^4;
+ sbit DL=P3^5;
+ sbit DR=P1^0;
+ /*******传感器后***/
+ sbit B0=P1^5;
+ sbit B1=P1^6;
+ sbit B2=P1^7;
+ sbit B3=P2^4;
+ sbit B4=P2^5;
+ sbit B5=P2^6;
+ sbit BL=P2^7;
+ sbit BR=P3^2;
+/******按键**********/
+ sbit k1 = P2^1;
+ sbit k2 = P2^2;
+/******激光***********/
+sbit laserL = P3^3;
+sbit laserR = P3^4;
+//sbit control = P3^6;
+sbit Middle=P3^6;
+sbit lasersteering = P3^7;
+ /******超声波*******/
+ sbit sonic=P2^0;
+ /******语音播放*****/
+ sbit Voice=P2^3;
+ /****变量********/
+ unsigned int hightL,hightR,count;
+ unsigned int num;//控制周期的长短
+ unsigned int tempposition;
+ //unsigned char lasermiddle;
+ 
+void delay_ms(unsigned int t)
+{
+	unsigned int a,b,c;
+
+	for(a=t;a>0;a--)
+
+	for(b=10;b>0;b--)
+
+	for(c=85;c>0;c--);
+}
+
+void stop()
+{
+   ML1=0;
+	 ML2=0;
+	 MR1=0;
+	 MR2=0;
+}
+
+void init()
+{
+	 ENA=1;
+	 ENB=1;
+	 num=200;
+	 TMOD=0x02;
+	 EA=1;
+	 ET0=1;
+	 TH0=145;  
+	 TL0=145;   
+	 TR0=1;
+}
+
+/*void initlaserm()
+{
+	EA=1;
+	TMOD=0x10;
+	ET1=1;
+	TH1=(65536-10000)/256;  
+	TL1=(65536-10000)%256;   
+	TR1=1;
+}*/
+void left(bit f)
+{
+  if(f)
+  {
+    ML1=1;
+	  ML2=0;
+  }
+  else
+  {
+    ML1=0;
+	  ML2=1;
+  }
+}
+
+
+void right(bit f)
+{
+  if(f)
+  {
+	  MR1=1;
+	  MR2=0;
+	}
+  else
+	{
+	  MR1=0;
+	  MR2=1;
+	}
+}
+
+void clDL(unsigned char status)
+{ 
+  hightL=1;
+  hightR=700 ;
+  right(status);
+  left(status);
+}
+
+void nurseDL(unsigned char status)
+{ 
+  hightL=1;
+  hightR=90 ;
+  right(status);
+  left(status);
+}
+void crBL()
+{
+	hightL=1;
+	hightR=600;
+	right(0);
+	left(0);
+}
+
+void clDR(unsigned char status)
+{ 
+  hightL=700;
+  hightR=1;
+  right(status);
+  left(status);
+}
+
+void nurseDR(unsigned char status)
+{ 
+  hightL=91;
+  hightR=1;
+  right(status);
+  left(status);
+}
+
+void crBR()
+{
+	hightL=600;
+	hightR=1;
+	right(0);
+	left(0);
+}
+
+void clD0(unsigned char status)
+{ 
+  hightL=300;
+  hightR=1;
+  right(status);
+  left(status);
+}
+
+void nurseD0(unsigned char status)
+{ 
+  hightL=80;
+  hightR=1;
+  right(status);
+  left(status);
+}
+
+void clB0()
+{
+	hightL=1;
+	hightR=250;
+	right(0);
+	left(0);
+}
+void clD1(unsigned char status)
+{ 
+  hightL=200;
+  hightR=1;
+  right(status);
+  left(status);
+}
+
+void nurseD1(unsigned char status)
+{ 
+  hightL=70;
+  hightR=1;
+  right(status);
+  left(status);
+}
+
+void clB1()
+{
+	hightL=1;
+	hightR=150;
+	right(0);
+	left(0);
+}
+void crD4(unsigned char status)
+{
+   hightL=1;
+   hightR=225;
+   right(status);
+   left(status);
+}
+
+void nurseD4(unsigned char status)
+{
+   hightL=1;
+   hightR=75;
+   right(status);
+   left(status);
+}
+
+void clB4()
+{
+	hightL=150;
+	hightR=1;
+	right(0);
+	left(0);
+}
+
+void crD5(unsigned char status)
+{
+   hightL=1;
+   hightR=325;
+   right(status);
+   left(status);
+}
+
+void nurseD5(unsigned char status)
+{
+   hightL=1;
+   hightR=80;
+   right(status);
+   left(status);
+}
+
+void clB5()
+{
+	hightL=250;
+	hightR=1;
+	right(0);
+	left(0);
+}
+
+void gocllaserL()
+{ 
+  hightL=200;
+  hightR=1;
+  right(1);
+  left(1);
+}
+void gocrlaserR()
+{ 
+  hightL=1;
+  hightR=200;
+  right(1);
+  left(1);
+}
+void backcllaserL()
+{ 
+  hightL=1;
+  hightR=140;
+  right(0);
+  left(0);
+}
+void backcrlaserR()
+{ 
+  hightL=180;
+  hightR=1;
+  right(0);
+  left(0);
+}
+
+ void turnR() 
+ {
+   hightL=400;
+   hightR=200;
+   right(0);
+   left(1);
+ }
+
+ void turnR180() 
+ {
+   hightL=400;
+   hightR=200;
+   right(0);
+   left(1);
+ }
+ 
+void turnRModify()
+{
+	hightL=30;
+  hightR=60;
+  right(0);
+  left(1);
+}
+
+ void turnL()
+ {
+  hightR=400;
+  hightL=200;
+  right(1);
+  left(0);
+ }
+
+void turnLModify()
+{
+	hightR=30;
+  hightL=60;
+  right(1);
+  left(0);
+}
+
+ void go()
+ {
+   /*hightR=205;
+   hightL=165;*/
+	 hightR=400;
+	 hightL=360;
+   left(1);
+   right(1);
+ }
+ 
+void gonurseplatform()
+{
+	 hightR=100;
+   hightL=85 ;
+   left(1);
+   right(1);
+}
+ void back()
+ {
+   hightR=205;
+   hightL=180;
+   left(0);
+   right(0);
+ }
+
+void backA()
+{
+	 hightR=70;
+   hightL=400;
+   left(0);
+   right(0);
+}
+
+
+void goA()
+{
+	 hightR=450;
+	 hightL=360;
+	 left(1);
+   right(1);
+}
+
+void backB()
+{
+	 hightR=220;
+   hightL=180;
+   left(0);
+   right(0);
+}
+
+void gone()
+{
+	go(); 	
+	if((!DL)||(!DR))
+	{
+		while(!DL)
+		{
+			clDL(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!DR)
+		{
+			clDR(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+  if((!D0)||(!D1))
+  {
+			while(!D0)
+			{
+				clD0(1);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+			while(!D1)
+			{
+				clD1(1);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+	  }				 
+	  if((!D4||!D5))
+	  {
+			while(!D5)
+			{
+				crD5(1);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+			while(!D4)
+			{
+				crD4(1);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+	   }
+}
+
+void backbegin()
+{
+	back(); 	
+	if((!DL)||(!DR))
+	{
+		while(!DL)
+		{
+			clDL(0);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!DR)
+		{
+			clDR(0);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+  if((!D0)||(!D1))
+  {
+			while(!D0)
+			{
+				clD0(0);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+			while(!D1)
+			{
+				clD1(0);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+	  }				 
+	  if((!D4||!D5))
+	  {
+			while(!D5)
+			{
+				crD5(0);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+			while(!D4)
+			{
+				crD4(0);
+				if(!D2||!D3)
+				{
+					break;
+				}
+			}
+	   }
+}
+
+void gonenurseplatform()
+{
+	gonurseplatform(); 	
+	if((!DL)||(!DR))
+	{
+		while(!DL)
+		{
+			if(!BR)
+			{
+				break;
+			}
+			if(!sonic)
+			{
+				break;
+			}
+			if(!D2||!D3)
+			{
+				break;
+			}
+			nurseDL(1);
+		}
+		while(!DR)
+		{
+			if(!BR)
+			{
+				break;
+			}
+			if(!sonic)
+			{
+				break;
+			}
+			if(!D2||!D3)
+			{
+				break;
+			}
+			nurseDR(1);
+		}
+	}
+  if((!D0)||(!D1))
+  {
+			while(!D0)
+			{
+				if(!BR)
+				{
+					break;
+				}
+				if(!sonic)
+				{
+					break;
+				}
+				if(!D2||!D3)
+				{
+					break;
+				}
+				nurseD0(1);
+			}
+			while(!D1)
+			{
+				if(!BR)
+				{
+					break;
+				}
+				if(!sonic)
+				{
+					break;
+				}
+				if(!D2||!D3)
+				{
+					break;
+				}
+				nurseD1(1);
+			}
+	  }				 
+	  if((!D4||!D5))
+	  {
+			while(!D5)
+			{
+				if(!BR)
+				{
+					break;
+				}
+				if(!sonic)
+				{
+					break;
+				}
+				if(!D2||!D3)
+				{
+					break;
+				}
+				nurseD5(1);
+			}
+			while(!D4)
+			{
+				if(!BR)
+				{
+					break;
+				}
+				if(!sonic)
+				{
+					break;
+				}
+				if(!D2||!D3)
+				{
+					break;
+				}
+				nurseD4(1);
+			}
+	   }
+}
+void goneback()
+{
+	back();
+	if((!BL)||(!BR))
+	{
+		while(!BL)
+		{
+			crBL();
+			if(!B2||!B3)
+			{
+				break;
+			}
+		}
+		while(!BR)
+		{
+			crBR();
+			if(!B2||!B3)
+			{
+				break;
+			}
+		}
+	}
+	if((!B0)||(!B1))
+	{
+		while(!B0)
+		{
+			clB0();
+			if(!B2||!B3)
+			{
+				break;
+			}
+		}
+		while(!B1)
+		{
+			clB1();
+			if(!B2||!B3)
+			{
+				break;
+			}
+		}
+	}
+	if((!B4)||(!B5))
+	{
+		while(!B5)
+		{
+			clB5();
+			if(!B2||!B3)
+			{
+				break;
+			}
+		}
+		while(!B4)
+		{
+			clB4();
+			if(!B2||!B3)
+			{
+				break;
+			}
+		}
+	}
+}
+void goLaserModify()
+{
+	go();
+	if(laserL||laserR)
+	{
+		while(laserL)
+		{
+			gocllaserL();
+			if(!laserL)
+			{
+				break;
+			}
+			if((!D1)&&(!D2)&&(!D3)&&(!D4))
+			{
+				break;
+			}
+		}
+		while(laserR)
+		{
+			gocrlaserR();
+			if(!laserR)
+			{
+				break;
+			}
+			if((!D1)&&(!D2)&&(!D3)&&(!D4))
+			{
+				break;
+			}
+		}
+	}
+}
+void backALaserModify()
+{
+	backA();
+	if(laserL||laserR)
+	{
+		while(laserL)
+		{
+			backcllaserL();
+			if(!laserL)
+			{
+				break;
+			}
+			if(!DR)
+			{
+				break;
+			}
+		}
+		while(laserR)
+		{
+			backcrlaserR();
+			if(!laserR)
+			{
+				break;
+			}
+			if(!DR)
+			{
+				break;
+			}
+		}
+	}
+}
+
+void backBLaserModify()
+{
+	backB();
+	if(laserL||laserR)
+	{
+		while(laserL)
+		{
+			backcllaserL();
+			if(!laserL)
+			{
+				break;
+			}
+			if(!DL)
+			{
+				break;
+			}
+		}
+		while(laserR)
+		{
+			backcrlaserR();
+			if(!laserR)
+			{
+				break;
+			}
+			if(!DL)
+			{
+				break;
+			}
+		}
+	}
+}
+
+void ModifyCar()
+{
+	stop();
+	delay_ms(500);
+	if((!DL||!D5||!D4)&&(!BL||!B0||!B1))
+	{
+		while(1)
+		{
+			//delay_ms(50);
+			if((!DL)&&(!BL))
+			{
+				break;
+			}
+			if((!D5)&&(!B0))
+			{
+				break;
+			}
+			if((!D4)&&(!B1))
+			{
+				break;
+			}
+			if((!DR)&&(!BR))
+			{
+				break;
+			}
+			if((!B5)&&(!D0))
+			{
+				break;
+			}
+			if((!B4)&&(!D1))
+			{
+				break;
+			}
+			if((!D2)&&(!B3))
+			{
+				break;
+			}
+			if((!D3)&&(!B2))
+			{
+				break;
+			}
+			if(!sonic)
+			{
+				break;
+			}
+			turnRModify();
+		}
+	}
+	if((!DL||!D5||!D4)&&(!BR||!B5||!B4))
+	{
+		while(1)
+		{
+			//delay_ms(50);
+			if((!DL)&&(!BL))
+			{
+				break;
+			}
+			if((!D5)&&(!B0))
+			{
+				break;
+			}
+			if((!D4)&&(!B1))
+			{
+				break;
+			}
+			if((!DR)&&(!BR))
+			{
+				break;
+			}
+			if((!B5)&&(!D0))
+			{
+				break;
+			}
+			if((!B4)&&(!D1))
+			{
+				break;
+			}
+			if((!D2)&&(!B3))
+			{
+				break;
+			}
+			if((!D3)&&(!B2))
+			{
+				break;
+			}
+			if(!sonic)
+			{
+				break;
+			}
+			turnLModify();
+		}
+	}
+	if((!DR||!D0||!D1)&&(!BL||!B0||!B1))
+	{
+		while(1)
+		{
+			//delay_ms(50);
+			if((!DL)&&(!BL))
+			{
+				break;
+			}
+			if((!D5)&&(!B0))
+			{
+				break;
+			}
+			if((!D4)&&(!B1))
+			{
+				break;
+			}
+			if((!DR)&&(!BR))
+			{
+				break;
+			}
+			if((!B5)&&(!D0))
+			{
+				break;
+			}
+			if((!B4)&&(!D1))
+			{
+				break;
+			}
+			if((!D2)&&(!B3))
+			{
+				break;
+			}
+			if((!D3)&&(!B2))
+			{
+				break;
+			}
+			if(!sonic)
+			{
+				break;
+			}
+			turnLModify();
+		}
+	}
+	if((!DR||!D0||!D1)&&(!BR||!B5||!B4))
+	{
+		while(1)
+		{
+			//delay_ms(50);
+			if((!DL)&&(!BL))
+			{
+				break;
+			}
+			if((!D5)&&(!B0))
+			{
+				break;
+			}
+			if((!D4)&&(!B1))
+			{
+				break;
+			}
+			if((!DR)&&(!BR))
+			{
+				break;
+			}
+			if((!B5)&&(!D0))
+			{
+				break;
+			}
+			if((!B4)&&(!D1))
+			{
+				break;
+			}
+			if((!D2)&&(!B3))
+			{
+				break;
+			}
+			if((!D3)&&(!B2))
+			{
+				break;
+			}
+			if(!sonic)
+			{
+				break;
+			}
+			turnRModify();
+		}
+	}
+	stop();
+	delay_ms(500);
+}
+void turnleft()
+{
+	stop();
+  delay_ms(1000);
+  turnL();
+  delay_ms(1400);//转弯延时
+	stop();
+	delay_ms(500);
+	if((!DL)||(!DR))
+	{
+		while(!DL)
+		{
+			clDL(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!DR)
+		{
+			clDR(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+  if((!D4)||(!D5))
+  {
+    while(!D4)
+		{
+			crD4(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!D5)
+		{
+			crD5(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+	if((!D0)||(!D1))
+  {
+    while(!D0)
+		{
+			clD0(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!D1)
+		{
+			clD1(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+}
+
+/*void turnleftsensor()
+{
+	stop();
+	delay_ms(1000);
+	turnL();
+	delay_ms(500);
+	while(1)
+	{
+		turnL();
+		if((!D2)&&(!B3))
+		{
+			break;
+		}
+		if((!D3)&&(!B2))
+		{
+			break;
+		}
+	}
+	stop();
+	delay_ms(1000);
+}*/
+
+void turnleftsensor()
+{
+	stop();
+	delay_ms(1000);
+	turnL();
+	delay_ms(1000);
+	while(1)
+	{
+		//turnL();
+		if(!Middle||!B2||!B3)
+		{
+			break;
+		}
+	}
+	stop();
+	delay_ms(1000);
+}
+
+void turnleftn()
+{
+	stop();
+  delay_ms(1000);
+	turnL();
+  delay_ms(1400);//转弯延时
+	stop();
+	delay_ms(500);
+}
+void turnright()
+{
+	stop();
+  delay_ms(1400);
+  turnR();
+  delay_ms(1400);//转弯延时
+	stop();
+	delay_ms(500);
+	if((!DL)||(!DR))
+	{
+		while(!DL)
+		{
+			clDL(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!DR)
+		{
+			clDR(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+	if((!D4)||(!D5))
+  {
+    while(!D4)
+		{
+			crD4(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!D5)
+		{
+			crD5(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+	if((!D0)||(!D1))
+  {
+    while(!D0)
+		{
+			clD0(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!D1)
+		{
+			clD1(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+}
+
+/*void turnrightsensor()
+{
+	stop();
+	delay_ms(1000);
+	turnR();
+	delay_ms(500);
+	while(1)
+	{
+		turnR();
+		if((!D2)&&(!B3))
+		{
+			break;
+		}
+		if((!D3)&&(!B2))
+		{
+			break;
+		}
+	}
+	stop();
+	delay_ms(1000);
+}*/
+
+void turnrightsensor()
+{
+	stop();
+	delay_ms(1000);
+	turnR();
+	delay_ms(800);
+	while(1)
+	{
+		//turnR();
+		if(!Middle||!B2||!B3)
+		{
+			break;
+		}
+	}
+	stop();
+	delay_ms(1000);
+}
+
+void turnrightn()
+{
+	stop();
+  delay_ms(1200);
+	turnR();
+  delay_ms(1400);//转弯延时
+	stop();
+	delay_ms(500);
+}
+
+void turnleftdelay()
+{
+	turnL();
+	delay_ms(1500);
+}
+
+void turnrightdelay()
+{
+	turnR();
+	delay_ms(1500);
+}
+
+void turn180()
+{
+	stop();
+  delay_ms(1000);
+  turnleftdelay();
+	/*while(1)
+	{
+		turnR();
+		if((!D2)&&(!B3))
+		{
+			break;
+		}
+		if((!D3)&&(!B2))
+		{
+			break;
+		}
+		if((!D4)&&(!B1))
+		{
+			break;
+		}
+		if((!D1)&&(!B4))
+		{
+			break;
+		}
+	}*/
+	while(1)
+	{
+		if(!Middle&&(!D2||!D3))
+		{
+			break;
+		}
+	}
+	stop();
+	delay_ms(1000);
+	/*delay_ms(500);
+	if((!DL)||(!DR))
+	{
+		while(!DL)
+		{
+			clDL(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!DR)
+		{
+			clDR(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+	if((!D4)||(!D5))
+  {
+    while(!D4)
+		{
+			crD4(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!D5)
+		{
+			crD5(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}
+	if((!D0)||(!D1))
+  {
+    while(!D0)
+		{
+			clD0(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+		while(!D1)
+		{
+			clD1(1);
+			if(!D2||!D3)
+			{
+				break;
+			}
+		}
+	}*/
+}
+
+void turn180L()
+{
+	stop();
+  delay_ms(1000);
+  turnleftdelay();
+	while(1)
+	{
+		//turnL();
+		/*if((!D2)&&(!B3))
+		{
+			break;
+		}
+		if((!D3)&&(!B2))
+		{
+			break;
+		}
+		if((!D4)&&(!B1))
+		{
+			break;
+		}
+		if((!D1)&&(!B4))
+		{
+			break;
+		}*/
+		if(!Middle&&(!D2||!D3))
+		{
+			break;
+		}
+	}
+	stop();
+	delay_ms(1000);
+}
+void gonesupplement()
+{
+	gone();
+	delay_ms(350);
+}
+
+void gonesupplement1()
+{
+	gonenurseplatform();
+	delay_ms(10);
+}
+
+void backsupplement()
+{
+	goneback();
+	delay_ms(300);
+}
+
+void steeringgoL()
+{
+	hightR=35;
+	hightL=(abs(tempposition-512))*2+15+35;//调试测定
+	left(1);
+  right(1);
+}
+void steeringgoR()
+{
+	hightR=(abs(tempposition-512))*2+35+15;//调试测定
+	hightL=15;
+	left(1);
+  right(1);
+}
+void SteeringModify()
+{
+	unsigned int position;
+	unsigned int flag;
+	tempposition=512;
+	position=512;
+	//for(position=512;position<1023;position++)
+	flag=0;
+	delay_ms(1000);
+	while(1)
+	{
+		/*if(!laserM)
+		{
+			delay_ms(5);
+			if(!laserM)
+			{
+				//tempposition=position;
+				break;
+			}
+		}*/
+		if(!sonic)
+		{
+			delay_ms(2);
+			if(!sonic)
+			{
+				SetServoPosition1(3,tempposition,100);
+				break;
+			}
+		}
+		SetServoPosition1(3,position,100);
+		delay_ms(50);
+		if(!lasersteering)
+		{
+			delay_ms(2);
+			if(!lasersteering)
+			{
+				SetServoPosition1(3,position,100);
+				delay_ms(1000);
+				tempposition=position;
+				flag=1;
+				break;
+			}
+		}
+		position=position-10;
+		if(position<400)
+		{
+			break;
+		}
+	}
+	//position=512;
+	if(flag==0)
+	{
+		while(1)
+		{
+			/*if(!laserM)
+			{
+				delay_ms(5);
+				if(!laserM)
+				{
+					//tempposition=position;
+					break;
+				}
+			}*/
+			if(!sonic)
+			{
+				delay_ms(2);
+				if(!sonic)
+				{
+					SetServoPosition1(3,tempposition,100);
+					break;
+				}
+			}
+			SetServoPosition1(3,position,100);
+			delay_ms(50);
+			if(!lasersteering)
+			{
+				delay_ms(2);
+				if(!lasersteering)
+				{
+					SetServoPosition1(3,position,100);
+					delay_ms(1000);
+					tempposition=position;
+					break;
+				}
+			}
+			position=position+10;
+			if(position>600)
+			{
+				break;
+			}
+		}
+	}
+	if(tempposition<=512)
+	{
+		while(1)
+		{
+			if(!sonic)
+			{
+				delay_ms(2);
+				if(!sonic)
+				{
+					SetServoPosition1(3,tempposition,100);
+					break;
+				}
+			}
+			steeringgoL();
+			delay_ms(120);
+			stop();
+			delay_ms(200);
+			/*if(!laserM)
+			{
+				delay_ms(3);
+				if(!laserM)
+				{
+					break;
+				}
+			}*/
+			if(lasersteering)
+			{
+				delay_ms(3);
+				if(lasersteering)
+				{
+					stop();
+					delay_ms(50);
+					break;
+				}
+			}
+		}
+		//delay_ms(150);//调试测定
+	}
+	else
+	{
+		while(1)
+		{
+			if(!sonic)
+			{
+				delay_ms(2);
+				if(!sonic)
+				{
+					SetServoPosition1(3,tempposition,100);
+					break;
+				}
+			}
+			steeringgoR();
+			delay_ms(120);
+			stop();
+			delay_ms(200);
+					/*if(!laserM)
+					{
+						delay_ms(3);
+						if(!laserM)
+						{
+							break;
+						}
+					}*/
+			if(lasersteering)
+			{
+				delay_ms(3);
+				if(lasersteering)
+				{
+					stop();
+					delay_ms(50);
+					break;
+				}
+			}
+		}
+				//delay_ms(150);//调试测定
+	}
+}
+
+void voice()
+{
+	Voice=0;
+	delay_ms(2000);
+	Voice=1;
+}
+
+void turnbackL()
+{
+	stop();
+	delay_ms(1000);
+	turnL();
+	delay_ms(800);
+	while(1)
+	{
+		turnL();
+		if(!B3)
+		{
+			delay_ms(3);
+			if(!B3)
+			{
+				stop();
+				delay_ms(1000);
+				break;
+			}
+		}
+	}
+}
+
+void turnbackR()
+{
+	stop();
+	delay_ms(1000);
+	turnR();
+	delay_ms(800);
+	while(1)
+	{
+		turnR();
+		if(!B2)
+		{
+			delay_ms(3);
+			if(!B2)
+			{
+				stop();
+				delay_ms(1000);
+				break;
+			}
+		}
+	}
+}
+
+void Makewardrounds()
+{
+	while(1)	//从出发区域出发第一个路口
+	{
+	 gone();
+	 if((!D1)&&(!D2)&&(!D3)&&(!D4))
+	 {
+	  go();
+	  delay_ms(800);
+	  break;
+	 }
+	}
+	/*while(1)//第二个路口
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//go();
+			//delay_ms(70);//第二个路口前进延时
+			turnleftsensor();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//第三个路口
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//go();
+			//delay_ms(300);//前进延时
+			//turnrightn();
+			turnrightsensor();
+			gonesupplement();
+			break;
+		}
+	}*/
+	while(1)//第二个路口
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//go();
+			//delay_ms(70);//第二个路口前进延时
+			turnrightsensor();
+			backsupplement();
+			break;
+		}
+	}
+	while(1)//第三个路口
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//go();
+			//delay_ms(300);//前进延时
+			//turnrightn();
+			back();
+			delay_ms(100);
+			turnleftsensor();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//到达床头柜A
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(200);
+			stop();
+			voice();
+			delay_ms(5000);
+			backALaserModify();
+			delay_ms(2500);
+			break;
+		}
+	}
+	while(1)//退回到Q点
+	{
+		backALaserModify();
+		/*if(!DR)
+		{
+			turnright();
+			gonesupplement();
+			break;
+		}*/
+		if(!DR)
+		{
+			turnbackL();
+			backsupplement();
+			break;
+		}
+	}
+	/*while(1)//Q点到R点
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+	  {
+	   go();
+	   delay_ms(500);
+	   break;
+	  }
+	}*/
+	while(1)//Q点到R点
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+	  {
+	   goneback();
+	   delay_ms(500);
+	   break;
+	  }
+	}
+	/*while(1)//R点到S点
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+	  {
+			//go();
+			//delay_ms(300);//
+			turnleftsensor();
+			gonesupplement();
+			break;
+	  }
+	}*/
+	while(1)//R点到S点
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+	  {
+			//go();
+			//delay_ms(300);//
+			turnbackR();
+			gonesupplement();
+			break;
+	  }
+	}
+	while(1)//到达床头柜B
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(300);
+			stop();
+			voice();
+			delay_ms(5000);
+			backBLaserModify();
+			delay_ms(2500);
+			break;
+		}
+	}
+	/*while(1)//退回到S点
+	{
+		backBLaserModify();
+		if(!DL)
+		{
+			turnrightn();
+			backsupplement();
+			break;
+		}
+	}*/
+	while(1)//退回到S点
+	{
+		backBLaserModify();
+		if(!DL)
+		{
+			turnbackR();
+			backsupplement();
+			break;
+		}
+	}
+	/*while(1)//S点到R点
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			turnleftn();
+			backsupplement();
+			break;		}
+	}*/
+	while(1)//S点到R点
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			back();
+			delay_ms(100);
+			turnbackL();
+			backsupplement();
+			break;		}
+	}
+	while(1)//R点到起点白线，返回到终点区
+	{
+		goneback();
+		if((!B1)&&(!B2)&&(!B3)&&(!B4))
+		{
+			backbegin();
+			delay_ms(1200);
+			//stop();
+			break;
+		}
+	}
+}
+void GivingMedicine()//送药方案,取药瓶
+{
+	stop();
+	SetServoPosition1(1,200,500);  //夹子关
+	SetServoPosition1(2,0,500);  //夹子下降到最低点
+	SetServoPosition1(3,512,500);  //旋转舵机初始化
+	delay_ms(2000);
+	while(1)//直走到第一根白线上
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(600);
+			break;
+		}
+	}
+	/*while(1)//直走到第二根白线上，右转取药瓶
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//go();
+			//delay_ms(70);
+			turnrightsensor();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//到达S点，右转
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//control=0;
+			stop();
+			delay_ms(500);
+			SetServoPosition1(1,30,500);  //夹子开
+			turnrightsensor();
+			while(1)
+			{
+				gonurseplatform();
+				if(!BR)
+				{
+					delay_ms(3);
+					if(!BR)
+					{
+						go();
+						delay_ms(70);
+						stop();
+						delay_ms(1000);
+						break;
+					}
+				}
+			}
+			ModifyCar();
+			//gonesupplement1();
+			break;
+		}
+	}*/
+	while(1)//直走到第二根白线上，右转取药瓶
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//go();
+			//delay_ms(70);
+			turnleftsensor();
+			//gonesupplement();
+			goneback();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)//到达S点，右转
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//control=0;
+			back();
+			delay_ms(100);
+			stop();
+			delay_ms(500);
+			SetServoPosition1(1,30,500);  //夹子开
+			turnleftsensor();
+			while(1)
+			{
+				gonenurseplatform();
+				if(!BR)
+				{
+					delay_ms(3);
+					if(!BR)
+					{
+						go();
+						delay_ms(70);
+						stop();
+						delay_ms(1000);
+						break;
+					}
+				}
+			}
+			//ModifyCar();
+			//gonesupplement1();
+			break;
+		}
+	}
+	while(1)//直走到护士台
+	{
+		SteeringModify();
+		if(!sonic)
+		{
+			delay_ms(2);
+			if(!sonic)
+			{
+				break;
+			}
+		}
+	}
+	while(1)
+	{
+		stop();
+		delay_ms(1000);
+		SetServoPosition1(1,200,500);  //夹子关
+		delay_ms(1000);
+		//control=1;
+		//ModifyCar();
+		break;
+	}
+}
+/*void GivingMedicineOne()//送药方案1
+{
+	while(1)//退回到S点，右转
+	{
+		//backLaserModify();
+		//goneback();
+		back();
+		if(!DR)
+		{
+			//back();
+			//delay_ms(650);
+			turnright();
+			SetServoPosition1(3,512,500);  //旋转舵机转正
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//直走到R点
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			gone();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)//送药1右转
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			stop();
+			SetServoPosition1(2,1000,500);  //夹子上升到到最高点
+			delay_ms(1000);
+			turnrightn();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//走到床头柜A
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(300);//送药延时，需要调试确定
+			stop();
+			SetServoPosition1(1,30,100);//夹子开，放第一个药瓶
+			delay_ms(2000);
+			backALaserModify();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)//退回到Q点
+	{
+		backALaserModify();
+		if(!DR)
+		{
+			//back();
+			//delay_ms(650);
+			stop();
+			delay_ms(1000);			
+			SetServoPosition1(2,0,400);//夹子下降
+			turnright();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//Q点到R点
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+	  {
+	   go();
+	   delay_ms(1000);
+	   break;
+	  }
+	}
+	while(1)//直走到S点，右转
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			//control=0;
+			stop();
+			delay_ms(200);
+			turnright();
+			while(1)
+			{
+				gonurseplatform();
+				if(!BR)
+				{
+					delay_ms(3);
+					if(!BR)
+					{
+						go();
+						delay_ms(70);
+						stop();
+						delay_ms(1000);
+						break;
+					}
+				}
+			}
+			ModifyCar();
+			stop();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)//旋转舵机扫描直走到护士台
+	{
+		SteeringModify();
+		//gonurseplatform();*/
+		/*if(!laserM)
+		{
+			delay_ms(5);
+			if(!laserM)
+			{
+				stop();
+				delay_ms(1000);
+				SetServoPosition1(1,600,500);//夹子合拢，取第二个药瓶
+				delay_ms(1000);
+				break;
+			}
+		}*/
+		/*if(!sonic)
+		{
+			delay_ms(3);
+			if(!sonic)
+			{
+				stop();
+				delay_ms(1000);
+				gonurseplatform();
+				delay_ms(1550);
+				stop();
+				delay_ms(1000);
+				SetServoPosition1(1,200,500);//夹子合拢，取第二个药瓶
+				delay_ms(1000);
+				break;
+			}
+		}
+	}
+	while(1)//退回到S点，转180度
+	{
+		//control=1;
+		backALaserModify();
+		delay_ms(1000);
+		turn180();
+		stop();
+		delay_ms(500);
+		SetServoPosition1(3,512,500);  //旋转舵机转正
+		SetServoPosition1(2,1000,500);//夹子上升到最高点
+		delay_ms(1000);
+		gonesupplement();
+		break;
+	}
+	while(1)//直走到床头柜B
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(350);//送药延时，需要调试确定
+			stop();
+			SetServoPosition1(1,30,100);//夹子打开，放第二个药瓶
+			delay_ms(2000);
+			backBLaserModify();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)//退回到S点，左转
+	{
+		backBLaserModify();
+		if((!DL))
+		{
+			//back();
+			//delay_ms(680);
+			SetServoPosition1(2,0,500);//夹子下降
+			turnleft();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//直走到R点，左转
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			turnleft();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//直走到起点区的第一根白线
+	{
+		gone();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(1200);//延时到终点区
+			stop();//停止
+			break;
+		}
+	}
+}*/
+
+void GivingMedicineOne()
+{
+	while(1)
+	{
+		goneback();
+		if(!DR)
+		{
+			turnleftsensor();
+			SetServoPosition1(3,512,500);  //旋转舵机转正
+			backsupplement();
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			goneback();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			back();
+			delay_ms(100);
+			turnleftsensor();
+			SetServoPosition1(2,1000,500);  //夹子上升到最高处
+			go();
+			delay_ms(250);
+			break;
+		}
+	}
+	while(1)
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(300);
+			stop();
+			SetServoPosition1(1,30,100);//夹子开，放第一个药瓶
+			delay_ms(2000);
+			backALaserModify();
+			delay_ms(2500);
+			break;
+		}
+	}
+	while(1)
+	{
+		backALaserModify();
+		if(!DR)
+		{
+			SetServoPosition1(2,0,500);  //夹子下降到最低点
+			turnleftsensor();
+			backsupplement();
+			goneback();
+			delay_ms(300);
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			goneback();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			back();
+			delay_ms(100);
+			turnleftsensor();
+			while(1)
+			{
+				gonenurseplatform();
+				if(!BR)
+				{
+					delay_ms(3);
+					if(!BR)
+					{
+						go();
+						delay_ms(70);
+						//ModifyCar();
+						stop();
+						delay_ms(1000);
+						break;
+					}
+				}
+			}
+			break;
+		}
+	}
+	while(1)
+	{
+		SteeringModify();
+		if(!sonic)
+		{
+			delay_ms(3);
+			if(!sonic)
+			{
+				stop();
+				delay_ms(1000);
+				gonenurseplatform();
+				delay_ms(850);
+				stop();
+				delay_ms(1000);
+				SetServoPosition1(1,200,500);//夹子合拢，取第二个药瓶
+				delay_ms(1000);
+				break;
+			}
+		}
+	}
+	while(1)
+	{
+		goneback();
+		delay_ms(1100);
+		turn180();
+		stop();
+		delay_ms(500);
+		SetServoPosition1(3,512,500);  //旋转舵机转正
+		SetServoPosition1(2,1000,500);//夹子上升到最高点
+		delay_ms(1000);
+		gone();
+		delay_ms(2000);
+		break;
+	}
+	while(1)//直走到床头柜B
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(350);//送药延时，需要调试确定
+			stop();
+			SetServoPosition1(1,30,100);//夹子打开，放第二个药瓶
+			delay_ms(2000);
+			backBLaserModify();
+			delay_ms(2500);
+			break;
+		}
+	}
+	while(1)
+	{
+		backBLaserModify();
+		if(!DL)
+		{
+			SetServoPosition1(2,0,500);  //夹子下降到最低点
+			turnrightsensor();
+			backsupplement();
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			back();
+			delay_ms(100);
+			turnleftsensor();
+			backsupplement();
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			goneback();
+			delay_ms(1000);
+			stop();
+			break;
+		}
+	}
+}
+void GivingMedicineTwo()//送药方案2
+{
+	while(1)//退回到S点，转180度
+	{
+		/*backLaserModify();
+		if((!BR))
+		{
+			back();
+			delay_ms(500);
+			turn180();
+			stop();
+			SetServoPosition1(2,1000,500);//夹子上升
+			break;
+		}*/
+		backALaserModify();
+		delay_ms(1000);
+		turn180();
+		stop();
+		SetServoPosition1(2,1000,500);//夹子上升
+		SetServoPosition1(3,512,500);  //旋转舵机转正
+		delay_ms(1000);
+		break;
+	}
+	while(1)//直走到床头柜B
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(300);
+			stop();
+			SetServoPosition1(1,30,100);//夹子打开，放第一个药瓶
+			delay_ms(2000);
+			backBLaserModify();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)//退回到S点，转180度
+	{
+		backBLaserModify();
+		if((!DL))
+		{
+			//control=0;
+			back();
+			delay_ms(400);
+			stop();
+			delay_ms(500);
+			SetServoPosition1(2,0,500);//夹子下降
+			turn180L();
+			//turn180();
+			while(1)
+			{
+				gonurseplatform();
+				if(!BR)
+				{
+					delay_ms(3);
+					if(!BR)
+					{
+						go();
+						delay_ms(70);
+						stop();
+						delay_ms(500);
+						break;
+					}
+				}
+			}
+			ModifyCar();
+			break;
+		}
+	}
+	while(1)//直走到护士台
+	{
+		SteeringModify();
+		//gonurseplatform();
+		if(!sonic)
+		{
+			delay_ms(3);
+			if(!sonic)
+			{
+				stop();
+				delay_ms(1000);
+				gonurseplatform();
+				delay_ms(1600);
+				stop();
+				delay_ms(500);
+				SetServoPosition1(1,200,500);//夹子合拢，取第二个药瓶
+				delay_ms(2000);
+				break;
+			}
+		}
+	}
+	while(1)//退回到S点，右转
+	{
+		backALaserModify();
+		if(!DR)
+		{
+			stop();
+			SetServoPosition1(3,512,500);  //旋转舵机转正
+			delay_ms(500);
+			turnleftsensor();
+			backsupplement();
+			//control=1;
+			break;
+		}
+	}
+	while(1)//直走到R点
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			goneback();
+			delay_ms(1000);
+			break;
+		}
+	}
+	while(1)//送药2右转
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			stop();
+			SetServoPosition1(2,900,500);//夹子上升
+			delay_ms(500);
+			turnleftsensor();
+			gonesupplement();
+			break;
+		}
+	}
+	while(1)//走到床头柜A
+	{
+		goLaserModify();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			go();
+			delay_ms(250);//送药延时，需要调试确定
+			stop();
+			SetServoPosition1(1,30,100);//夹子开，放第二个药瓶
+			delay_ms(2000);
+			backALaserModify();
+			delay_ms(2500);
+			break;
+		}
+	}
+	while(1)//退回到Q点
+	{
+		backALaserModify();
+		if(!DR)
+		{
+			stop();
+			SetServoPosition1(2,0,500);//夹子下降
+			delay_ms(500);
+			turnleftsensor();
+			backsupplement();
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			turnrightsensor();
+			backsupplement();
+			break;
+		}
+	}
+	while(1)
+	{
+		goneback();
+		if((!D1)&&(!D2)&&(!D3)&&(!D4))
+		{
+			back();
+			delay_ms(1200);
+			stop();
+			break;
+		}
+	}
+}
+void main()
+{
+	init();
+	//initlaserm();
+	uart1_init();
+	delay_ms(1000);
+	//InitADC();
+	SetServoPosition1(1,200,500);  //夹子关
+	//SetServoPosition1(1,30,500);  //夹子开
+	//SetServoPosition1(2,0,500);  //夹子下降到最低点
+	SetServoPosition1(2,1000,500);  //夹子上升到到最高点
+	//delay_ms(1000);
+	//SetServoPosition1(2,0,500);  //夹子下降到最低点
+	SetServoPosition1(3,512,500);  //旋转舵机初始化
+	//delay_ms(500);
+	//SetServoPosition1(3,300,500);  //旋转舵机向右转
+	if(k1==0)
+	{
+		delay_ms(5);
+		if(k1==0)
+		{
+			Makewardrounds();
+			GivingMedicine();
+			GivingMedicineOne();
+			while(1)
+			{
+				stop();
+			}
+	  }
+	}
+	if(k2==0)
+	{
+		delay_ms(5);
+		if(k2==0)
+		{
+			Makewardrounds();
+			GivingMedicine();
+			GivingMedicineTwo();
+		}
+	}
+}
+
+void time0() interrupt 1
+{
+  TR0=0;
+  if(count==hightL)
+  {
+    ENA=0;
+  }
+  if(count==hightR)
+  {
+    ENB=0;
+  }
+  if(count==num)
+  {
+		count=0;
+		ENA=1;
+		ENB=1;
+  }
+  count++;
+  TR0=1; 
+}
+
+/*void laserm() interrupt 3
+{
+	TH1=(65536-10000)/256;  
+	TL1=(65536-10000)%256;
+	TR1=0;
+	if(!laserM)
+	{
+		delay_ms(5);
+		if(!laserM)
+		{
+			lasermiddle=0;
+		}
+		else
+		{
+			lasermiddle=1;
+		}
+	}
+	TR1=1;
+}*/
